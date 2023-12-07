@@ -1,0 +1,11 @@
+# vscode
+.vscode
+
+# ESP-IDF
+sdkconfig.*
+build
+dependencies.lock
+managed_components
+
+# Doxygen
+docs

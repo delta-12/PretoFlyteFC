@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<suppressions>
+    <suppress>
+        <id>missingInclude</id>
+    </suppress>
+    <suppress>
+        <id>missingIncludeSystem</id>
+    </suppress>
+    <suppress>
+        <id>unusedFunction</id>
+        <fileName>*/main/PretoFlyteFC.c</fileName>
+        <symbolName>app_main</symbolName>
+    </suppress>
+</suppressions>

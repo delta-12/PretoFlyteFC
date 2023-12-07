@@ -1,0 +1,3 @@
+[submodule "tools/cppcheck"]
+	path = tools/cppcheck
+	url = git@github.com:danmar/cppcheck.git
