@@ -103,7 +103,7 @@ typedef struct
 /* Function Prototypes
  ******************************************************************************/
 
-void Sbus_InitHandle(Sbus_Handle_t *const handle, uart_port_t uartPort, const Sbus_UartPin_t rxPin, const Sbus_UartPin_t txPin, uint8_t (*const rxBuffer)[SBUS_FRAME_SIZE], uint8_t (*const txBuffer)[SBUS_FRAME_SIZE]);
+void Sbus_InitHandle(Sbus_Handle_t *const handle, uart_port_t uartPort, const Sbus_UartPin_t rxPin, const Sbus_UartPin_t txPin, const bool inverted, uint8_t (*const rxBuffer)[SBUS_FRAME_SIZE], uint8_t (*const txBuffer)[SBUS_FRAME_SIZE]);
 void Sbus_DeInitHandle(Sbus_Handle_t *const handle);
 void Sbus_InitPayload(Sbus_Payload_t *const payload, uint16_t (*const channelBuffer)[SBUS_CHANNELS]);
 bool Sbus_Rx(Sbus_Handle_t *const handle, Sbus_Payload_t *const payload);
