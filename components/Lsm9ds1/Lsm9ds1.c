@@ -10,6 +10,8 @@
 #include "esp_err.h"
 #include "esp_log.h"
 #include "Lsm9ds1.h"
+#include "Lsm9ds1_Registers.h"
+#include <string.h>
 
 /* Defines
  ******************************************************************************/
@@ -34,11 +36,20 @@
 #define LSM9DS1_M_SPI_CMD_MS 0x01U    /* Auto-increment address in multiple read/write SPI cmds for mag */
 #define LSM9DS1_M_ADDRESS_MASK 0x3FU  /* Mag addresses are 6 bits */
 
-#define LSM9DS1_AG_WHO_AM_I 0x0FU
-#define LSM9DS1_AG_WHO_AM_I_RSP 0x68U
+#define LSM9DS1_AG_WHO_AM_I_RSP 0x68U /* WHO_AM_I device identification register value */
+#define LSM9DS1_M_WHO_AM_RSP 0x3DU    /* WHO_AM_I_M device identification register value  */
 
-#define LSM9DS1_M_WHO_AM_I 0x0FU
-#define LSM9DS1_M_WHO_AM_RSP 0x3D
+#define LSM9DS1_FIFO_MODE_BYPASS 0U               /* Bypass mode. FIFO turned off. */
+#define LSM9DS1_FIFO_MODE_FIFO 1U                 /* FIFO mode. Stops collecting data when FIFO is full. */
+#define LSM9DS1_FIFO_MODE_CONTINUOUS_TO_FIFO 3U   /* Continuous mode until trigger is deasserted, then FIFO mode. */
+#define LSM9DS1_FIFO_MODE_BYPASS_TO_CONTINUOUS 4U /* Bypass mode until trigger is deasserted, then Continuous mode. */
+#define LSM9DS1_FIFO_MODE_CONTINUOUS 6U           /* Continuous mode. If the FIFO is full, the new sample overwrites the older sample. */
+
+/* Typedefs
+ ******************************************************************************/
+
+typedef uint8_t Lsm9ds1_FifoMode_t;
+typedef uint8_t Lsm9ds1_FifoThreshold_t;
 
 /* Globals
  ******************************************************************************/
@@ -48,12 +59,14 @@ static const char *Lsm9ds1_LogTag = "LSM9DS1";
 /* Function Prototypes
  ******************************************************************************/
 
-static inline esp_err_t Lsm9ds1_AccelGyroTransmit(const Lsm9ds1_Handle_t *const handle, spi_transaction_t *const spiTranscation, const uint64_t address, const size_t length);
-static esp_err_t Lsm9ds1_AccelGyroRead(const Lsm9ds1_Handle_t *const handle, spi_transaction_t *const spiTranscation, const uint64_t address, const size_t length);
-static esp_err_t Lsm9ds1_AccelGyroWrite(const Lsm9ds1_Handle_t *const handle, spi_transaction_t *const spiTranscation, const uint64_t address, const size_t length);
-static inline esp_err_t Lsm9ds1_MagTransmit(const Lsm9ds1_Handle_t *const handle, spi_transaction_t *const spiTranscation, const uint64_t address, const size_t length);
-static esp_err_t Lsm9ds1_MagRead(const Lsm9ds1_Handle_t *const handle, spi_transaction_t *const spiTranscation, const bool ms, const uint64_t address, const size_t length);
-static esp_err_t Lsm9ds1_MagWrite(const Lsm9ds1_Handle_t *const handle, spi_transaction_t *const spiTranscation, const bool ms, const uint64_t address, const size_t length);
+static inline esp_err_t Lsm9ds1_AccelGyroSpiTransmit(const Lsm9ds1_Handle_t *const handle, spi_transaction_t *const spiTranscation, const uint64_t address, const size_t length);
+static esp_err_t Lsm9ds1_AccelGyroSpiRead(const Lsm9ds1_Handle_t *const handle, spi_transaction_t *const spiTranscation, const uint64_t address, const size_t length);
+static esp_err_t Lsm9ds1_AccelGyroSpiWrite(const Lsm9ds1_Handle_t *const handle, spi_transaction_t *const spiTranscation, const uint64_t address, const size_t length);
+static esp_err_t Lsm9ds1_EnableFifo(const bool enable);
+static esp_err_t Lsm9ds1_SetFifo(const Lsm9ds1_FifoMode_t fifoMode, const Lsm9ds1_FifoThreshold_t fifoThreshold);
+static inline esp_err_t Lsm9ds1_MagSpiTransmit(const Lsm9ds1_Handle_t *const handle, spi_transaction_t *const spiTranscation, const uint64_t address, const size_t length);
+static esp_err_t Lsm9ds1_MagSpiRead(const Lsm9ds1_Handle_t *const handle, spi_transaction_t *const spiTranscation, const bool ms, const uint64_t address, const size_t length);
+static esp_err_t Lsm9ds1_MagSpiWrite(const Lsm9ds1_Handle_t *const handle, spi_transaction_t *const spiTranscation, const bool ms, const uint64_t address, const size_t length);
 
 /* Function Definitions
  ******************************************************************************/
@@ -115,8 +128,8 @@ bool Lsm9ds1_WhoAmI(const Lsm9ds1_Handle_t *const handle)
     spi_transaction_t spiTransactionAccelGyro = {0U};
     spi_transaction_t spiTransactionMag = {0U};
 
-    if (Lsm9ds1_AccelGyroRead(handle, &spiTransactionAccelGyro, LSM9DS1_AG_WHO_AM_I, LSM9DS1_SPI_TRANSACTION_LENGTH_8) == ESP_OK &&
-        Lsm9ds1_MagRead(handle, &spiTransactionMag, false, LSM9DS1_AG_WHO_AM_I, LSM9DS1_SPI_TRANSACTION_LENGTH_8) == ESP_OK)
+    if (Lsm9ds1_AccelGyroSpiRead(handle, &spiTransactionAccelGyro, LSM9DS1_WHO_AM_I_XG, LSM9DS1_SPI_TRANSACTION_LENGTH_8) == ESP_OK &&
+        Lsm9ds1_MagSpiRead(handle, &spiTransactionMag, false, LSM9DS1_WHO_AM_I_M, LSM9DS1_SPI_TRANSACTION_LENGTH_8) == ESP_OK)
     {
         /* TODO remove magic numbers */
         success = (((spiTransactionAccelGyro.rx_data[0U] << 8U) | spiTransactionMag.rx_data[0U]) == ((LSM9DS1_AG_WHO_AM_I_RSP << 8) | LSM9DS1_M_WHO_AM_RSP));
@@ -125,7 +138,134 @@ bool Lsm9ds1_WhoAmI(const Lsm9ds1_Handle_t *const handle)
     return success;
 }
 
-static inline esp_err_t Lsm9ds1_AccelGyroTransmit(const Lsm9ds1_Handle_t *const handle, spi_transaction_t *const spiTranscation, const uint64_t address, const size_t length)
+void Lsm9ds1_AccelInit(const Lsm9ds1_Handle_t *const handle)
+{
+    uint8_t registerValue;
+    spi_transaction_t spiTransaction;
+
+    /* CTRL_REG5_XL */
+    registerValue = 0U;
+    registerValue |= (1U << 5U); /* Zen_XL */
+    registerValue |= (1U << 4U); /* Yen_XL */
+    registerValue |= (1U << 3U); /* Xen_XL */
+    memset(&spiTransaction, 0U, sizeof(spiTransaction));
+    spiTransaction.tx_data[0U] = registerValue;
+    Lsm9ds1_AccelGyroSpiWrite(handle, &spiTransaction, LSM9DS1_CTRL_REG5_XL, LSM9DS1_SPI_TRANSACTION_LENGTH_8);
+
+    /* CTRL_REG6_XL */
+    registerValue = 0U;
+    registerValue |= (6U << 5U); /* ODR_XL */
+    registerValue |= (0U << 3U); /* FS_XL */
+    memset(&spiTransaction, 0U, sizeof(spiTransaction));
+    spiTransaction.tx_data[0U] = registerValue;
+    Lsm9ds1_AccelGyroSpiWrite(handle, &spiTransaction, LSM9DS1_CTRL_REG6_XL, LSM9DS1_SPI_TRANSACTION_LENGTH_8);
+
+    /* CTRL_REG7_XL */
+    registerValue = 0U; /* Default values */
+    memset(&spiTransaction, 0U, sizeof(spiTransaction));
+    spiTransaction.tx_data[0U] = registerValue;
+    Lsm9ds1_AccelGyroSpiWrite(handle, &spiTransaction, LSM9DS1_CTRL_REG7_XL, LSM9DS1_SPI_TRANSACTION_LENGTH_8);
+}
+
+void Lsm9ds1_GyroInit(const Lsm9ds1_Handle_t *const handle)
+{
+    /* TODO
+    set operating mode
+    set power mode
+    set buffer mode
+
+    programmable fifo threshold status, fif overrun events, and number of unread sample stored in FIFO_SRC
+    can generate interrupts on INTx_A/G pins
+
+    Modes:
+        Bypass mode- new data overwrites old data, only first address is used
+        FIFO mode- data is stored in FIFO until overwritten, reset FIFO by selecting Bypass mode, can resize FIFO depth, FIFO threshold interrupt can be enabled
+        Continuous mode- old data is discarded as new data arrives, FIFO threshold flag for unread samples, can be routed to INTx_A/G pins
+        Continuous-to-FIFO mode- operates according to bit in INT_GEN_SRC_XL
+        Bypass-to-continuous mode- operates according to bit in INT_GEN_SRC_XL
+     */
+
+    uint8_t registerValue;
+    spi_transaction_t spiTransaction;
+
+    /* CTRL_REG1_G */
+    registerValue = 0U;
+    registerValue |= (6U << 5U); /* ODR_G */
+    registerValue |= (0U << 3U); /* FS_G */
+    registerValue |= 0U;         /* BW_G */
+    memset(&spiTransaction, 0U, sizeof(spiTransaction));
+    spiTransaction.tx_data[0U] = registerValue;
+    Lsm9ds1_AccelGyroSpiWrite(handle, &spiTransaction, LSM9DS1_CTRL_REG1_G, LSM9DS1_SPI_TRANSACTION_LENGTH_8);
+
+    /* CTRL_REG2_G */
+    registerValue = 0U; /* Default values */
+    memset(&spiTransaction, 0U, sizeof(spiTransaction));
+    spiTransaction.tx_data[0U] = registerValue;
+    Lsm9ds1_AccelGyroSpiWrite(handle, &spiTransaction, LSM9DS1_CTRL_REG2_G, LSM9DS1_SPI_TRANSACTION_LENGTH_8);
+
+    /* CTRL_REG3_G */
+    registerValue = 0U; /* Default values */
+    memset(&spiTransaction, 0U, sizeof(spiTransaction));
+    spiTransaction.tx_data[0U] = registerValue;
+    Lsm9ds1_AccelGyroSpiWrite(handle, &spiTransaction, LSM9DS1_CTRL_REG3_G, LSM9DS1_SPI_TRANSACTION_LENGTH_8);
+
+    /* CTRL_REG4 */
+    registerValue = 0U;
+    registerValue |= (1U << 5U); /* Zen_G */
+    registerValue |= (1U << 4U); /* Yen_G */
+    registerValue |= (1U << 3U); /* Xen_G */
+    registerValue |= (1U << 1U); /* LIR_XL1 */
+    memset(&spiTransaction, 0U, sizeof(spiTransaction));
+    spiTransaction.tx_data[0U] = registerValue;
+    Lsm9ds1_AccelGyroSpiWrite(handle, &spiTransaction, LSM9DS1_CTRL_REG4, LSM9DS1_SPI_TRANSACTION_LENGTH_8);
+
+    /* ORIENT_CFG_G */
+    registerValue = 0U; /* Default values */
+    memset(&spiTransaction, 0U, sizeof(spiTransaction));
+    spiTransaction.tx_data[0U] = registerValue;
+    Lsm9ds1_AccelGyroSpiWrite(handle, &spiTransaction, LSM9DS1_ORIENT_CFG_G, LSM9DS1_SPI_TRANSACTION_LENGTH_8);
+}
+
+void Lsm9ds1_MagInit(const Lsm9ds1_Handle_t *const handle)
+{
+    uint8_t registerValue;
+    spi_transaction_t spiTransaction;
+
+    /* CTRL_REG1_M */
+    registerValue = 0U;
+    registerValue |= (3U << 5U); /* OM */
+    registerValue |= (7U << 2U); /* DO */
+    memset(&spiTransaction, 0U, sizeof(spiTransaction));
+    spiTransaction.tx_data[0U] = registerValue;
+    Lsm9ds1_MagSpiWrite(handle, &spiTransaction, false, LSM9DS1_CTRL_REG1_M, LSM9DS1_SPI_TRANSACTION_LENGTH_8);
+
+    /* CTRL_REG2_M */
+    registerValue = 0U; /* Default values */
+    memset(&spiTransaction, 0U, sizeof(spiTransaction));
+    spiTransaction.tx_data[0U] = registerValue;
+    Lsm9ds1_MagSpiWrite(handle, &spiTransaction, false, LSM9DS1_CTRL_REG2_M, LSM9DS1_SPI_TRANSACTION_LENGTH_8);
+
+    /* CTRL_REG3_M */
+    registerValue = 0U; /* Default values */
+    memset(&spiTransaction, 0U, sizeof(spiTransaction));
+    spiTransaction.tx_data[0U] = registerValue;
+    Lsm9ds1_MagSpiWrite(handle, &spiTransaction, false, LSM9DS1_CTRL_REG3_M, LSM9DS1_SPI_TRANSACTION_LENGTH_8);
+
+    /* CTRL_REG4_M */
+    registerValue = 0U;
+    registerValue |= (3U << 2U); /* OMZ */
+    memset(&spiTransaction, 0U, sizeof(spiTransaction));
+    spiTransaction.tx_data[0U] = registerValue;
+    Lsm9ds1_MagSpiWrite(handle, &spiTransaction, false, LSM9DS1_CTRL_REG4_M, LSM9DS1_SPI_TRANSACTION_LENGTH_8);
+
+    /* CTRL_REG5_M */
+    registerValue = 0U; /* Default values */
+    memset(&spiTransaction, 0U, sizeof(spiTransaction));
+    spiTransaction.tx_data[0U] = registerValue;
+    Lsm9ds1_MagSpiWrite(handle, &spiTransaction, false, LSM9DS1_CTRL_REG5_M, LSM9DS1_SPI_TRANSACTION_LENGTH_8);
+}
+
+static inline esp_err_t Lsm9ds1_AccelGyroSpiTransmit(const Lsm9ds1_Handle_t *const handle, spi_transaction_t *const spiTranscation, const uint64_t address, const size_t length)
 {
     esp_err_t err = ESP_OK;
 
@@ -139,23 +279,23 @@ static inline esp_err_t Lsm9ds1_AccelGyroTransmit(const Lsm9ds1_Handle_t *const 
     return err;
 }
 
-static esp_err_t Lsm9ds1_AccelGyroRead(const Lsm9ds1_Handle_t *const handle, spi_transaction_t *const spiTranscation, const uint64_t address, const size_t length)
+static esp_err_t Lsm9ds1_AccelGyroSpiRead(const Lsm9ds1_Handle_t *const handle, spi_transaction_t *const spiTranscation, const uint64_t address, const size_t length)
 {
     spiTranscation->cmd = LSM9DS1_AG_SPI_CMD_READ;
     spiTranscation->flags = SPI_TRANS_USE_RXDATA;
 
-    return Lsm9ds1_AccelGyroTransmit(handle, spiTranscation, address, length);
+    return Lsm9ds1_AccelGyroSpiTransmit(handle, spiTranscation, address, length);
 }
 
-static esp_err_t Lsm9ds1_AccelGyroWrite(const Lsm9ds1_Handle_t *const handle, spi_transaction_t *const spiTranscation, const uint64_t address, const size_t length)
+static esp_err_t Lsm9ds1_AccelGyroSpiWrite(const Lsm9ds1_Handle_t *const handle, spi_transaction_t *const spiTranscation, const uint64_t address, const size_t length)
 {
     spiTranscation->cmd = LSM9DS1_AG_SPI_CMD_WRITE;
     spiTranscation->flags = SPI_TRANS_USE_TXDATA;
 
-    return Lsm9ds1_AccelGyroTransmit(handle, spiTranscation, address, length);
+    return Lsm9ds1_AccelGyroSpiTransmit(handle, spiTranscation, address, length);
 }
 
-static inline esp_err_t Lsm9ds1_MagTransmit(const Lsm9ds1_Handle_t *const handle, spi_transaction_t *const spiTranscation, const uint64_t address, const size_t length)
+static inline esp_err_t Lsm9ds1_MagSpiTransmit(const Lsm9ds1_Handle_t *const handle, spi_transaction_t *const spiTranscation, const uint64_t address, const size_t length)
 {
     esp_err_t err = ESP_OK;
 
@@ -169,7 +309,7 @@ static inline esp_err_t Lsm9ds1_MagTransmit(const Lsm9ds1_Handle_t *const handle
     return err;
 }
 
-static esp_err_t Lsm9ds1_MagRead(const Lsm9ds1_Handle_t *const handle, spi_transaction_t *const spiTranscation, const bool ms, const uint64_t address, const size_t length)
+static esp_err_t Lsm9ds1_MagSpiRead(const Lsm9ds1_Handle_t *const handle, spi_transaction_t *const spiTranscation, const bool ms, const uint64_t address, const size_t length)
 {
     spiTranscation->cmd = LSM9DS1_M_SPI_CMD_READ,
     spiTranscation->flags = SPI_TRANS_USE_RXDATA;
@@ -179,10 +319,10 @@ static esp_err_t Lsm9ds1_MagRead(const Lsm9ds1_Handle_t *const handle, spi_trans
         spiTranscation->cmd |= LSM9DS1_M_SPI_CMD_MS;
     }
 
-    return Lsm9ds1_MagTransmit(handle, spiTranscation, address, length);
+    return Lsm9ds1_MagSpiTransmit(handle, spiTranscation, address, length);
 }
 
-static esp_err_t Lsm9ds1_MagWrite(const Lsm9ds1_Handle_t *const handle, spi_transaction_t *const spiTranscation, const bool ms, const uint64_t address, const size_t length)
+static esp_err_t Lsm9ds1_MagSpiWrite(const Lsm9ds1_Handle_t *const handle, spi_transaction_t *const spiTranscation, const bool ms, const uint64_t address, const size_t length)
 {
     spiTranscation->cmd = LSM9DS1_M_SPI_CMD_WRITE,
     spiTranscation->flags = SPI_TRANS_USE_TXDATA;
@@ -192,5 +332,5 @@ static esp_err_t Lsm9ds1_MagWrite(const Lsm9ds1_Handle_t *const handle, spi_tran
         spiTranscation->cmd |= LSM9DS1_M_SPI_CMD_MS;
     }
 
-    return Lsm9ds1_MagTransmit(handle, spiTranscation, address, length);
+    return Lsm9ds1_MagSpiTransmit(handle, spiTranscation, address, length);
 }
