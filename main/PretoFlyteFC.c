@@ -1,15 +1,19 @@
 /* Includes
  ******************************************************************************/
 #include "driver/gpio.h"
+#include "esp_log.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 #include "Lsm9ds1.h"
+#include "math.h"
 #include "Sbus.h"
 
 /* Defines
  ******************************************************************************/
 
 #define SBUS_UART UART_NUM_2
-#define SBUS_RX_PIN GPIO_NUM_23
-#define SBUS_TX_PIN GPIO_NUM_19
+#define SBUS_RX_PIN GPIO_NUM_32
+#define SBUS_TX_PIN GPIO_NUM_33
 #define SBUS_ROLL_CHANNEL SBUS_CHANNEL_1
 #define SBUS_PITCH_CHANNEL SBUS_CHANNEL_2
 #define SBUS_YAW_CHANNEL SBUS_CHANNEL_3
@@ -22,14 +26,21 @@
 /* Globals
  ******************************************************************************/
 
-static Lsm9ds1_Handle_t Lsm9ds1Handle;
+static const char *PretoFlyteFC_LogTag = "PretoFlyteFC";
 
-static uint8_t SbusRxBuffer[SBUS_FRAME_SIZE] = {0U};
-static uint8_t SbusTxBuffer[SBUS_FRAME_SIZE] = {0U};
-static Sbus_Handle_t SbusHandle;
+static Lsm9ds1_Handle_t PretoFlyteFC_Lsm9ds1Handle;
 
-static uint16_t SbusChannelBuffer[SBUS_CHANNELS] = {0U};
-static Sbus_Payload_t SbusPayload;
+static uint8_t PretoFlyteFC_SbusRxBuffer[SBUS_FRAME_SIZE] = {0U};
+static uint8_t PretoFlyteFC_SbusTxBuffer[SBUS_FRAME_SIZE] = {0U};
+static Sbus_Handle_t PretoFlyteFC_SbusHandle;
+
+static uint16_t PretoFlyteFC_SbusChannelBuffer[SBUS_CHANNELS] = {0U};
+static Sbus_Payload_t PretoFlyteFC_SbusPayload;
+
+/* Function Prototypes
+ ******************************************************************************/
+
+static void PretoFlyteFC_LogAccelGyroTask(void *arg);
 
 /* Function Definitions
  ******************************************************************************/
@@ -47,20 +58,69 @@ void app_main(void)
         .IntM = GPIO_NUM_27,
         .Rdy = GPIO_NUM_15,
     };
-    Lsm9ds1_Init(&Lsm9ds1Handle, SPI3_HOST, &lsm9ds1PinConfig);
+    Lsm9ds1_Init(&PretoFlyteFC_Lsm9ds1Handle, SPI3_HOST, &lsm9ds1PinConfig);
+    Lsm9ds1_GyroInit(&PretoFlyteFC_Lsm9ds1Handle);
+    Lsm9ds1_AccelInit(&PretoFlyteFC_Lsm9ds1Handle);
+    Lsm9ds1_MagInit(&PretoFlyteFC_Lsm9ds1Handle);
+    // Lsm9ds1_AccelGyroCalibrate(&PretoFlyteFC_Lsm9ds1Handle);
+    xTaskCreate(PretoFlyteFC_LogAccelGyroTask, "PretoFlyteFC_LogAccelGyroTask", 2048U, NULL, 10U, NULL);
 
-    Sbus_InitHandle(&SbusHandle, SBUS_UART, SBUS_RX_PIN, SBUS_TX_PIN, false, &SbusRxBuffer, &SbusTxBuffer);
-    Sbus_InitPayload(&SbusPayload, &SbusChannelBuffer);
+    Sbus_InitHandle(&PretoFlyteFC_SbusHandle, SBUS_UART, SBUS_RX_PIN, SBUS_TX_PIN, false, &PretoFlyteFC_SbusRxBuffer, &PretoFlyteFC_SbusTxBuffer);
+    Sbus_InitPayload(&PretoFlyteFC_SbusPayload, &PretoFlyteFC_SbusChannelBuffer);
 
     while (1U)
     {
-        Sbus_SetChannel(&SbusPayload, SBUS_ROLL_CHANNEL, SBUS_CHANNEL_VALUE(0.75));
-        Sbus_SetChannel(&SbusPayload, SBUS_PITCH_CHANNEL, SBUS_CHANNEL_VALUE(0.75));
-        Sbus_SetChannel(&SbusPayload, SBUS_YAW_CHANNEL, SBUS_CHANNEL_VALUE(0.75));
-        Sbus_SetChannel(&SbusPayload, SBUS_THROTTLE_CHANNEL, SBUS_CHANNEL_VALUE(0.75));
-        Sbus_Tx(&SbusHandle, &SbusPayload);
-        Sbus_Rx(&SbusHandle, &SbusPayload);
+        Sbus_SetChannel(&PretoFlyteFC_SbusPayload, SBUS_ROLL_CHANNEL, SBUS_CHANNEL_VALUE(0.75));
+        Sbus_SetChannel(&PretoFlyteFC_SbusPayload, SBUS_PITCH_CHANNEL, SBUS_CHANNEL_VALUE(0.75));
+        Sbus_SetChannel(&PretoFlyteFC_SbusPayload, SBUS_YAW_CHANNEL, SBUS_CHANNEL_VALUE(0.75));
+        Sbus_SetChannel(&PretoFlyteFC_SbusPayload, SBUS_THROTTLE_CHANNEL, SBUS_CHANNEL_VALUE(0.75));
+        Sbus_Tx(&PretoFlyteFC_SbusHandle, &PretoFlyteFC_SbusPayload);
+        Sbus_Rx(&PretoFlyteFC_SbusHandle, &PretoFlyteFC_SbusPayload);
 
         vTaskDelay(10U / portTICK_PERIOD_MS);
     }
+}
+
+static void PretoFlyteFC_LogAccelGyroTask(void *arg)
+{
+    double pitch;
+    double roll;
+
+    for (;;)
+    {
+        if (Lsm9ds1_AccelAvailable(&PretoFlyteFC_Lsm9ds1Handle))
+        {
+            Lsm9ds1_AccelRead(&PretoFlyteFC_Lsm9ds1Handle);
+        }
+        if (Lsm9ds1_GyroAvailable(&PretoFlyteFC_Lsm9ds1Handle))
+        {
+            Lsm9ds1_GyroRead(&PretoFlyteFC_Lsm9ds1Handle);
+        }
+
+        /* Pitch = atan(-ax, sqrt(ay^2, az^2)) */
+        pitch = atan2(PretoFlyteFC_Lsm9ds1Handle.Accel.Reading.X * -1.0,
+                      sqrt(PretoFlyteFC_Lsm9ds1Handle.Accel.Reading.Y * PretoFlyteFC_Lsm9ds1Handle.Accel.Reading.Y +
+                           PretoFlyteFC_Lsm9ds1Handle.Accel.Reading.Z * PretoFlyteFC_Lsm9ds1Handle.Accel.Reading.Z));
+
+        /* Roll = atan2(ay, az) */
+        roll = atan2(PretoFlyteFC_Lsm9ds1Handle.Accel.Reading.Y, PretoFlyteFC_Lsm9ds1Handle.Accel.Reading.Z);
+
+        ESP_LOGI(PretoFlyteFC_LogTag, "Ax: %.02lf, Ay: %.02lf, Az: %.02lf",
+                 PretoFlyteFC_Lsm9ds1Handle.Accel.Reading.X,
+                 PretoFlyteFC_Lsm9ds1Handle.Accel.Reading.Y,
+                 PretoFlyteFC_Lsm9ds1Handle.Accel.Reading.Z);
+        ESP_LOGI(PretoFlyteFC_LogTag, "Gx: %.02lf, Gy: %.02lf, Gz: %.02lf",
+                 PretoFlyteFC_Lsm9ds1Handle.Gyro.Reading.X,
+                 PretoFlyteFC_Lsm9ds1Handle.Gyro.Reading.Y,
+                 PretoFlyteFC_Lsm9ds1Handle.Gyro.Reading.Z);
+
+        /* Convert from radians to degrees */
+        pitch *= 180.0 / M_PI;
+        roll *= 180.0 / M_PI;
+        ESP_LOGI(PretoFlyteFC_LogTag, "Pitch: %.02lf deg, Roll: %.02lf deg", pitch, roll);
+
+        vTaskDelay(250U / portTICK_PERIOD_MS);
+    }
+
+    vTaskDelete(NULL);
 }
