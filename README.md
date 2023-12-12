@@ -30,20 +30,18 @@ In this section, you should provide a detailed description of your design.
 
 Write a summary of preliminary testing results from your prototypes in this section.
 
-What did you to do verify your design before moving into the final production phase (e.g. breadboards,
-test programs, etc)?
+What did you to do verify your design before moving into the final production phase (e.g. breadboards, test programs, etc)?
 
 What steps did you take, if any, to determine the feasibility of your design?
 
-Explain your test plan, the procedures you use to test your design, the various subcomponents and the outcomes from those tests. Include photos of the initial, assembled
-prototype, and photos from any testing results if available. This includes verification of hardware, software and enclosures.
+Explain your test plan, the procedures you use to test your design, the various subcomponents and the outcomes from those tests. Include photos of the initial, assembled prototype, and photos from any testing results if available. This includes verification of hardware, software and enclosures.
 
 - Assembled frame, soldered ESC and secondary flight controller, verified motors could manually be spun from flight controller configuration software
 - Tested if ESC could directly be commanded with ESP32 (Arduino PWM program)
 - Verified that flight controller received proper SBUS commands using flight controller configuration software (SBUS driver and level shifting)
 - Already had two IMU in possession, researched the difficulty for building a driver for each, ended using the older, less sophisticated one because easier to implement driver and simpler to work with
 - Verified IMU driver worked with breadboard, printed out pitch and roll
-- TODO verified the drone could be armed and props could be spun using SBUS driver
+- Verified the drone could be armed and props could be spun using SBUS driver
 
 ## Design Implementation
 
