@@ -348,6 +348,10 @@ void Lsm9ds1_AccelGyroCalibrate(Lsm9ds1_Handle_t *const handle)
 
         Lsm9ds1_EnableFifo(handle, false);
         Lsm9ds1_SetFifo(handle, LSM9DS1_FIFO_MODE_BYPASS, 0x00U);
+
+        ESP_LOGI(Lsm9ds1_LogTag, "Acceleromter and Gyroscope calibration complete");
+        ESP_LOGI(Lsm9ds1_LogTag, "Accelerometer bias [x, y, z]: %lf, %lf, %lf", handle->Accel.Bias.X, handle->Accel.Bias.Y, handle->Accel.Bias.Z);
+        ESP_LOGI(Lsm9ds1_LogTag, "Gyroscope bias [x, y, z]: %lf, %lf, %lf", handle->Gyro.Bias.X, handle->Gyro.Bias.Y, handle->Gyro.Bias.Z);
     }
 }
 
@@ -671,7 +675,7 @@ static void Lsm9ds1_SetFifo(const Lsm9ds1_Handle_t *const handle, const Lsm9ds1_
 
         memset(&spiTransaction, 0U, sizeof(spiTransaction));
         spiTransaction.tx_data[0U] = registerValue;
-        Lsm9ds1_AccelGyroSpiWrite(handle, &spiTransaction, LSM9DS1_CTRL_REG9, LSM9DS1_SPI_TRANSACTION_LENGTH_8);
+        Lsm9ds1_AccelGyroSpiWrite(handle, &spiTransaction, LSM9DS1_FIFO_CTRL, LSM9DS1_SPI_TRANSACTION_LENGTH_8);
     }
 }
 
