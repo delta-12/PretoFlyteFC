@@ -181,23 +181,33 @@ void app_main(void)
     int64_t previousSampleTime = 0;
     int64_t currentTime = 0;
 
+    double prevPitch = 0;
+    double prevRoll = 0;
+    double prevPitchRate = 0;
+    double prevRollRate = 0;
+    double prevYaw = 0;
+    double prevThrottle = 0;
+    double lpAlpha = 0.7;
+
     double targetPitch = 0;
     double targetRoll = 0;
 
     double pitchCmd;
     double rollCmd;
+    double yawCmd;
+    double throttleCmd;
 
     PretoFlyteFC_Pid_t pitchPid = {0U};
-    pitchPid.Kp = 0.45;
-    pitchPid.Ki = 0.3;
-    pitchPid.Kd = 0.5;
+    pitchPid.Kp = 0.375;
+    pitchPid.Ki = 0.0165;
+    pitchPid.Kd = 0.000;
     PretoFlyteFC_Pid_t rollPid = {0U};
-    rollPid.Kp = 0.45;
-    rollPid.Ki = 0.3;
-    rollPid.Kd = 0.5;
+    rollPid.Kp = 0.375;
+    rollPid.Ki = 0.0165;
+    rollPid.Kd = 0.000;
 
-    Kalman_1dFilterInit(&PretoFlyteFC_PitchFilter, 0, 4, 4, 3);
-    Kalman_1dFilterInit(&PretoFlyteFC_RollFilter, 0, 4, 4, 3);
+    Kalman_1dFilterInit(&PretoFlyteFC_PitchFilter, 0, 5, 1.5, 0.5);
+    Kalman_1dFilterInit(&PretoFlyteFC_RollFilter, 0, 5, 1.5, 0.5);
 
     for (;;)
     {
@@ -223,27 +233,45 @@ void app_main(void)
         pitchRate = -PretoFlyteFC_Lsm9ds1Handle.Gyro.Reading.Y;
 
         /* Roll = atan2(ay, az) */
-        roll = atan2(PretoFlyteFC_Lsm9ds1Handle.Accel.Reading.Y, PretoFlyteFC_Lsm9ds1Handle.Accel.Reading.Z);
-        rollRate = -PretoFlyteFC_Lsm9ds1Handle.Gyro.Reading.X;
+        roll = -atan2(PretoFlyteFC_Lsm9ds1Handle.Accel.Reading.Y, PretoFlyteFC_Lsm9ds1Handle.Accel.Reading.Z);
+        rollRate = PretoFlyteFC_Lsm9ds1Handle.Gyro.Reading.X;
 
-        // ESP_LOGI(PretoFlyteFC_LogTag, "Ax: %.02lf, Ay: %.02lf, Az: %.02lf",
-        //          PretoFlyteFC_Lsm9ds1Handle.Accel.Reading.X,
-        //          PretoFlyteFC_Lsm9ds1Handle.Accel.Reading.Y,
-        //          PretoFlyteFC_Lsm9ds1Handle.Accel.Reading.Z);
-        // ESP_LOGI(PretoFlyteFC_LogTag, "Gx: %.02lf, Gy: %.02lf, Gz: %.02lf",
-        //          PretoFlyteFC_Lsm9ds1Handle.Gyro.Reading.X,
-        //          PretoFlyteFC_Lsm9ds1Handle.Gyro.Reading.Y,
-        //          PretoFlyteFC_Lsm9ds1Handle.Gyro.Reading.Z);
+        ESP_LOGI(PretoFlyteFC_LogTag, "Ax: %.02lf, Ay: %.02lf, Az: %.02lf",
+                 PretoFlyteFC_Lsm9ds1Handle.Accel.Reading.X,
+                 PretoFlyteFC_Lsm9ds1Handle.Accel.Reading.Y,
+                 PretoFlyteFC_Lsm9ds1Handle.Accel.Reading.Z);
+        ESP_LOGI(PretoFlyteFC_LogTag, "Gx: %.02lf, Gy: %.02lf, Gz: %.02lf",
+                 PretoFlyteFC_Lsm9ds1Handle.Gyro.Reading.X,
+                 PretoFlyteFC_Lsm9ds1Handle.Gyro.Reading.Y,
+                 PretoFlyteFC_Lsm9ds1Handle.Gyro.Reading.Z);
 
         /* Convert from radians to degrees */
         pitch *= 180.0 / M_PI;
         roll *= 180.0 / M_PI;
+
+        /* Correct DC? */
+        pitch -= 1.6;
+        roll += 1.5;
+        pitchRate += 1.4;
+        rollRate += 1.3;
+
         // ESP_LOGI(PretoFlyteFC_LogTag, "Pitch[Raw]: %.02lf deg, Roll[Raw]: %.02lf deg", pitch, roll);
         // ESP_LOGI(PretoFlyteFC_LogTag, "Pitch[Rate]: %.02lf deg, Roll[Rate]: %.02lf deg", pitchRate, rollRate);
 
-        /* Correct DC? */
-        pitch -= 1.25;
-        roll += 0.7;
+        /* Apply low pass filter */
+        pitch = (lpAlpha * prevPitch) + ((1.0 - lpAlpha) * pitch);
+        roll = (lpAlpha * prevRoll) + ((1.0 - lpAlpha) * roll);
+        pitchRate = (lpAlpha * prevPitchRate) + ((1.0 - lpAlpha) * pitchRate);
+        rollRate = (lpAlpha * prevRollRate) + ((1.0 - lpAlpha) * rollRate);
+        prevPitch = pitch;
+        prevRoll = roll;
+        prevPitchRate = pitchRate;
+        prevRollRate = rollRate;
+
+        yawCmd = (lpAlpha * prevYaw) + ((1.0 - lpAlpha) * ReceiverYawPercentage);
+        throttleCmd = (lpAlpha * prevThrottle) + ((1.0 - lpAlpha) * ReceiverThrottlePercentage);
+        prevYaw = yawCmd;
+        prevThrottle = throttleCmd;
 
         /* Apply 1D Kalman filter to pitch and roll */
         Kalman_1dFilter(&PretoFlyteFC_PitchFilter, pitchRate, pitch, sampleTime);
@@ -272,8 +300,8 @@ void app_main(void)
         /* Transmit angle percentages */
         Sbus_SetChannel(&PretoFlyteFC_SbusPayload, SBUS_PITCH_CHANNEL, SBUS_CHANNEL_VALUE(pitchCmd));
         Sbus_SetChannel(&PretoFlyteFC_SbusPayload, SBUS_ROLL_CHANNEL, SBUS_CHANNEL_VALUE(rollCmd));
-        Sbus_SetChannel(&PretoFlyteFC_SbusPayload, SBUS_YAW_CHANNEL, SBUS_CHANNEL_VALUE(ReceiverYawPercentage));
-        Sbus_SetChannel(&PretoFlyteFC_SbusPayload, SBUS_THROTTLE_CHANNEL, SBUS_CHANNEL_VALUE(ReceiverThrottlePercentage));
+        Sbus_SetChannel(&PretoFlyteFC_SbusPayload, SBUS_YAW_CHANNEL, SBUS_CHANNEL_VALUE(yawCmd));
+        Sbus_SetChannel(&PretoFlyteFC_SbusPayload, SBUS_THROTTLE_CHANNEL, SBUS_CHANNEL_VALUE(throttleCmd));
         Sbus_SetChannel(&PretoFlyteFC_SbusPayload, SBUS_AUX_1_CHANNEL, SBUS_CHANNEL_VALUE(ReceiverArmPercentage));
         Sbus_Tx(&PretoFlyteFC_SbusHandle, &PretoFlyteFC_SbusPayload);
         Sbus_Rx(&PretoFlyteFC_SbusHandle, &PretoFlyteFC_SbusPayload);

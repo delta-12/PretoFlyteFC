@@ -7,8 +7,8 @@ port = "/dev/ttyACM0"
 baudrate = 115200
 serial_port = Serial(port=port, baudrate=baudrate, timeout=1)
 
-pitch_str = "Pitch: "
-roll_str = "Roll: "
+pitch_str = "Pitch[Filter]: "
+roll_str = "Roll[Filter]: "
 
 t =[]
 pitch = []
@@ -43,14 +43,14 @@ def update(i, t, pitch, roll):
         t.append(time())
 
         # Limit pitch and roll to 50 data points
-        x = t[-50:]
-        y1 = pitch[-50:]
-        y2 = roll[-50:]
+        t = t[-50:]
+        pitch = pitch[-50:]
+        roll = roll[-50:]
 
         # Draw x and y lists
         ax.clear()
-        ax.plot(x, y1, label="Pitch")
-        ax.plot(x, y2, label="Roll")
+        ax.plot(t, pitch, label="Pitch")
+        ax.plot(t, roll, label="Roll")
 
         # Format plot
         plt.title("Pitch and Roll")
@@ -58,5 +58,5 @@ def update(i, t, pitch, roll):
         plt.legend()
 
 # Set up plot to call update() function periodically
-_ = FuncAnimation(fig, update, fargs=(t, pitch, roll), interval=100)
+_ = FuncAnimation(fig, update, fargs=(t, pitch, roll), interval=1)
 plt.show()
