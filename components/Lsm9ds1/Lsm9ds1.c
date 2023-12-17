@@ -398,8 +398,8 @@ void Lsm9ds1_MagCalibrate(Lsm9ds1_Handle_t *const handle)
 
         /* Calculate raw biases */
         handle->Mag.BiasRaw.X = (magMax.X - magMin.X) / 2U;
-        handle->Mag.BiasRaw.X = (magMax.X - magMin.X) / 2U;
-        handle->Mag.BiasRaw.X = (magMax.X - magMin.X) / 2U;
+        handle->Mag.BiasRaw.Y = (magMax.Y - magMin.Y) / 2U;
+        handle->Mag.BiasRaw.Z = (magMax.Z - magMin.Z) / 2U;
 
         /* Calculate biases */
         Lsm9ds1_MagCalc(handle, handle->Mag.BiasRaw.X, &(handle->Mag.Bias.X));

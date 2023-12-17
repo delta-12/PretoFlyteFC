@@ -4,8 +4,69 @@
         <id>missingInclude</id>
     </suppress>
     <suppress>
+        <id>missingIncludeSystem</id>
+    </suppress>
+    <suppress>
+        <id>unusedFunction</id>
+        <fileName>*/components/Lsm9ds1/Lsm9ds1.c</fileName>
+    </suppress>
+    <suppress>
+        <id>unusedFunction</id>
+        <fileName>*/components/Sbus/Sbus.c</fileName>
+    </suppress>
+    <suppress>
         <id>unusedFunction</id>
         <fileName>*/main/PretoFlyteFC.c</fileName>
         <symbolName>app_main</symbolName>
+    </suppress>
+    <suppress>
+        <id>variableScope</id>
+        <fileName>*/main/PretoFlyteFC.c</fileName>
+        <symbolName>pitch</symbolName>
+    </suppress>
+    <suppress>
+        <id>variableScope</id>
+        <fileName>*/main/PretoFlyteFC.c</fileName>
+        <symbolName>roll</symbolName>
+    </suppress>
+    <suppress>
+        <id>variableScope</id>
+        <fileName>*/main/PretoFlyteFC.c</fileName>
+        <symbolName>pitchRate</symbolName>
+    </suppress>
+    <suppress>
+        <id>variableScope</id>
+        <fileName>*/main/PretoFlyteFC.c</fileName>
+        <symbolName>rollRate</symbolName>
+    </suppress>
+    <suppress>
+        <id>variableScope</id>
+        <fileName>*/main/PretoFlyteFC.c</fileName>
+        <symbolName>targetPitch</symbolName>
+    </suppress>
+    <suppress>
+        <id>variableScope</id>
+        <fileName>*/main/PretoFlyteFC.c</fileName>
+        <symbolName>targetRoll</symbolName>
+    </suppress>
+    <suppress>
+        <id>variableScope</id>
+        <fileName>*/main/PretoFlyteFC.c</fileName>
+        <symbolName>yawCmd</symbolName>
+    </suppress>
+    <suppress>
+        <id>variableScope</id>
+        <fileName>*/main/PretoFlyteFC.c</fileName>
+        <symbolName>throttleCmd</symbolName>
+    </suppress>
+    <suppress>
+        <id>variableScope</id>
+        <fileName>*/main/PretoFlyteFC.c</fileName>
+        <symbolName>currentTime</symbolName>
+    </suppress>
+    <suppress>
+        <id>variableScope</id>
+        <fileName>*/main/PretoFlyteFC.c</fileName>
+        <symbolName>sampleTime</symbolName>
     </suppress>
 </suppressions>

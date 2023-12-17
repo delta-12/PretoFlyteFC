@@ -114,7 +114,6 @@ static void PretoFlyteFC_ReadReceiverTask(void *arg);
 static inline double PretoFlyteFC_ReceiverPercentage(const int64_t time, const int64_t prevTime, const double min, const double max);
 static inline void PretoFlyteFC_Constrain(double *const value, const double min, const double max);
 static inline int64_t PretoFlyteFC_Micros(void);
-static inline int64_t PretoFlyteFC_Millis(void);
 
 /* Function Definitions
  ******************************************************************************/
@@ -134,17 +133,17 @@ void app_main(void)
 
     double lpAlpha = 0.7;
 
-    double targetPitch = 0;
-    double targetRoll = 0;
+    double targetPitch;
+    double targetRoll;
 
     double pitchCmd;
     double rollCmd;
     double yawCmd;
     double throttleCmd;
 
-    double sampleTime = 0;
+    int64_t currentTime;
     int64_t previousSampleTime = 0;
-    int64_t currentTime = 0;
+    double sampleTime;
 
     PretoFlyteFC_Pid_t pitchPid = {0U};
     pitchPid.Kp = 0.375;
@@ -173,16 +172,13 @@ void app_main(void)
     gpio_isr_handler_add(RX_THROTTLE_PIN, PretoFlyteFC_ReceiverIsrHandler, (void *)RX_THROTTLE_PIN);
     gpio_isr_handler_add(RX_ARM_PIN, PretoFlyteFC_ReceiverIsrHandler, (void *)RX_ARM_PIN);
 
+    /* Initialize and calibrate accelerometer and gyroscope */
     Lsm9ds1_PinConfig_t lsm9ds1PinConfig = {
         .Mosi = GPIO_NUM_23,
         .Miso = GPIO_NUM_19,
         .Clk = GPIO_NUM_18,
         .CsAccelGyro = GPIO_NUM_5,
         .CsMag = GPIO_NUM_22,
-        .Int1 = GPIO_NUM_26,
-        .Int2 = GPIO_NUM_25,
-        .IntM = GPIO_NUM_27,
-        .Rdy = GPIO_NUM_15,
     };
     if (!Lsm9ds1_Init(&PretoFlyteFC_Lsm9ds1Handle, SPI3_HOST, &lsm9ds1PinConfig))
     {
@@ -196,6 +192,7 @@ void app_main(void)
     Lsm9ds1_GyroInit(&PretoFlyteFC_Lsm9ds1Handle);
     Lsm9ds1_AccelGyroCalibrate(&PretoFlyteFC_Lsm9ds1Handle);
 
+    /* Initialize SBUS */
     Sbus_InitHandle(&PretoFlyteFC_SbusHandle, SBUS_UART, SBUS_RX_PIN, SBUS_TX_PIN, false, &PretoFlyteFC_SbusRxBuffer, &PretoFlyteFC_SbusTxBuffer);
     Sbus_InitPayload(&PretoFlyteFC_SbusPayload, &PretoFlyteFC_SbusChannelBuffer);
 
@@ -207,6 +204,7 @@ void app_main(void)
     Sbus_SetChannel(&PretoFlyteFC_SbusPayload, SBUS_AUX_1_CHANNEL, SBUS_CHANNEL_VALUE(0.00));
     Sbus_SetChannel(&PretoFlyteFC_SbusPayload, SBUS_AUX_2_CHANNEL, SBUS_CHANNEL_VALUE(1.00));
 
+    /* Initialze Kalman filters for pitch and roll */
     Kalman_1dFilterInit(&PretoFlyteFC_PitchFilter, 0, 5, 1.5, 0.5);
     Kalman_1dFilterInit(&PretoFlyteFC_RollFilter, 0, 5, 1.5, 0.5);
 
@@ -222,21 +220,7 @@ void app_main(void)
             Lsm9ds1_GyroRead(&PretoFlyteFC_Lsm9ds1Handle);
         }
 
-        /* Calculate and update sample time */
-        currentTime = PretoFlyteFC_Micros();
-        sampleTime = (double)(currentTime - previousSampleTime) * US_TO_S;
-        previousSampleTime = currentTime;
-
-        /* Pitch = atan(-ax, sqrt(ay^2, az^2)) */
-        pitch = atan2(PretoFlyteFC_Lsm9ds1Handle.Accel.Reading.X * -1.0,
-                      sqrt(PretoFlyteFC_Lsm9ds1Handle.Accel.Reading.Y * PretoFlyteFC_Lsm9ds1Handle.Accel.Reading.Y +
-                           PretoFlyteFC_Lsm9ds1Handle.Accel.Reading.Z * PretoFlyteFC_Lsm9ds1Handle.Accel.Reading.Z));
-        pitchRate = -PretoFlyteFC_Lsm9ds1Handle.Gyro.Reading.Y;
-
-        /* Roll = atan2(ay, az) */
-        roll = -atan2(PretoFlyteFC_Lsm9ds1Handle.Accel.Reading.Y, PretoFlyteFC_Lsm9ds1Handle.Accel.Reading.Z);
-        rollRate = PretoFlyteFC_Lsm9ds1Handle.Gyro.Reading.X;
-
+        /* Log raw accelerometer and gyroscope values */
         ESP_LOGD(PretoFlyteFC_LogTag, "Ax: %.02lf, Ay: %.02lf, Az: %.02lf",
                  PretoFlyteFC_Lsm9ds1Handle.Accel.Reading.X,
                  PretoFlyteFC_Lsm9ds1Handle.Accel.Reading.Y,
@@ -245,6 +229,23 @@ void app_main(void)
                  PretoFlyteFC_Lsm9ds1Handle.Gyro.Reading.X,
                  PretoFlyteFC_Lsm9ds1Handle.Gyro.Reading.Y,
                  PretoFlyteFC_Lsm9ds1Handle.Gyro.Reading.Z);
+
+        /* Calculate and update sample time */
+        currentTime = PretoFlyteFC_Micros();
+        sampleTime = (double)(currentTime - previousSampleTime) * US_TO_S;
+        previousSampleTime = currentTime;
+
+        /* Calculate pitch and roll from accelerometer */
+        /* Pitch = atan(-ax, sqrt(ay^2, az^2)) */
+        pitch = atan2(PretoFlyteFC_Lsm9ds1Handle.Accel.Reading.X * -1.0,
+                      sqrt(PretoFlyteFC_Lsm9ds1Handle.Accel.Reading.Y * PretoFlyteFC_Lsm9ds1Handle.Accel.Reading.Y +
+                           PretoFlyteFC_Lsm9ds1Handle.Accel.Reading.Z * PretoFlyteFC_Lsm9ds1Handle.Accel.Reading.Z));
+        /* Roll = atan2(ay, az) */
+        roll = -atan2(PretoFlyteFC_Lsm9ds1Handle.Accel.Reading.Y, PretoFlyteFC_Lsm9ds1Handle.Accel.Reading.Z);
+
+        /* Get pitch and roll rates from gyroscope */
+        pitchRate = -PretoFlyteFC_Lsm9ds1Handle.Gyro.Reading.Y;
+        rollRate = PretoFlyteFC_Lsm9ds1Handle.Gyro.Reading.X;
 
         /* Convert from radians to degrees */
         pitch *= 180.0 / M_PI;
@@ -256,10 +257,11 @@ void app_main(void)
         pitchRate += 1.4;
         rollRate += 1.3;
 
+        /* Log pitch, roll, pitch rate, and roll rate */
         ESP_LOGD(PretoFlyteFC_LogTag, "Pitch[Raw]: %.02lf deg, Roll[Raw]: %.02lf deg", pitch, roll);
         ESP_LOGD(PretoFlyteFC_LogTag, "Pitch[Rate]: %.02lf deg, Roll[Rate]: %.02lf deg", pitchRate, rollRate);
 
-        /* Apply low pass filter */
+        /* Apply low pass filter to pitch, roll, pitch rate, and roll rate calculated from IMU */
         pitch = (lpAlpha * prevPitch) + ((1.0 - lpAlpha) * pitch);
         roll = (lpAlpha * prevRoll) + ((1.0 - lpAlpha) * roll);
         pitchRate = (lpAlpha * prevPitchRate) + ((1.0 - lpAlpha) * pitchRate);
@@ -269,6 +271,8 @@ void app_main(void)
         prevPitchRate = pitchRate;
         prevRollRate = rollRate;
 
+        /* Apply low pass filter to signals from radio receiver */
+        /* TODO filter pitch and roll signals */
         yawCmd = (lpAlpha * prevYaw) + ((1.0 - lpAlpha) * ReceiverYawPercentage);
         throttleCmd = (lpAlpha * prevThrottle) + ((1.0 - lpAlpha) * ReceiverThrottlePercentage);
         prevYaw = yawCmd;
@@ -277,6 +281,8 @@ void app_main(void)
         /* Apply 1D Kalman filter to pitch and roll */
         Kalman_1dFilter(&PretoFlyteFC_PitchFilter, pitchRate, pitch, sampleTime);
         Kalman_1dFilter(&PretoFlyteFC_RollFilter, rollRate, roll, sampleTime);
+
+        /* Log filtered pitch and roll */
         ESP_LOGD(PretoFlyteFC_LogTag, "Pitch[Filter]: %.02lf deg, Roll[Filter]: %.02lf deg", PretoFlyteFC_PitchFilter.State, PretoFlyteFC_RollFilter.State);
 
         /* Apply PID controller */
@@ -296,6 +302,7 @@ void app_main(void)
         pitchCmd = (pitchCmd + ANGLE_MAX) / (ANGLE_MAX - ANGLE_MIN);
         rollCmd = (rollCmd + ANGLE_MAX) / (ANGLE_MAX - ANGLE_MIN);
 
+        /* Log pitch and roll commands as percentages [-50, 50] -> [0, 1] */
         ESP_LOGD(PretoFlyteFC_LogTag, "Pitch[Cmd]: %.02lf deg, Roll[Cmd]: %.02lf deg", pitchCmd, rollCmd);
 
         /* Transmit angle percentages */
@@ -427,9 +434,4 @@ static inline void PretoFlyteFC_Constrain(double *const value, const double min,
 static inline int64_t PretoFlyteFC_Micros(void)
 {
     return esp_timer_get_time();
-}
-
-static inline int64_t PretoFlyteFC_Millis(void)
-{
-    return (int64_t)(PretoFlyteFC_Micros() / US_PER_MS);
 }

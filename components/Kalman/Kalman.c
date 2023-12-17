@@ -29,23 +29,18 @@ void Kalman_1dFilter(Kalman_1dFilterContext_t *const context, const Kalman_Rate_
     if (context != NULL)
     {
         /* Predict current state */
-        // KalmanState = KalmanState + 0.004 * KalmanInput;
         context->State += sampleTime * rate;
 
         /* Calculate uncertainty of prediction */
-        // KalmanUncertainty = KalmanUncertainty + 0.004 * 0.004 * 4 * 4;
         context->Uncertainty += (sampleTime * sampleTime) + (context->RateVariation * context->RateVariation);
 
         /* Calculate Kalman gain */
-        // float KalmanGain = KalmanUncertainty * 1 / (1 * KalmanUncertainty + 3 * 3);
         double kalmanGain = context->Uncertainty / (context->Uncertainty + (context->MeasurementVariation * context->MeasurementVariation));
 
         /* Update prediction with measurement through the Kalman gain */
-        // KalmanState = KalmanState + KalmanGain * (KalmanMeasurement - KalmanState);
         context->State += kalmanGain * (measurement - context->State);
 
         /* Update uncertainty of prediction */
-        // KalmanUncertainty = (1 - KalmanGain) * KalmanUncertainty;
         context->Uncertainty = (1 - kalmanGain) * context->Uncertainty;
     }
 }
