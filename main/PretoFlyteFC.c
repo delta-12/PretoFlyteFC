@@ -121,6 +121,40 @@ static inline int64_t PretoFlyteFC_Millis(void);
 
 void app_main(void)
 {
+    double pitch;
+    double roll;
+    double pitchRate;
+    double rollRate;
+    double prevPitch = 0;
+    double prevRoll = 0;
+    double prevPitchRate = 0;
+    double prevRollRate = 0;
+    double prevYaw = 0;
+    double prevThrottle = 0;
+
+    double lpAlpha = 0.7;
+
+    double targetPitch = 0;
+    double targetRoll = 0;
+
+    double pitchCmd;
+    double rollCmd;
+    double yawCmd;
+    double throttleCmd;
+
+    double sampleTime = 0;
+    int64_t previousSampleTime = 0;
+    int64_t currentTime = 0;
+
+    PretoFlyteFC_Pid_t pitchPid = {0U};
+    pitchPid.Kp = 0.375;
+    pitchPid.Ki = 0.0165;
+    pitchPid.Kd = 0.000;
+    PretoFlyteFC_Pid_t rollPid = {0U};
+    rollPid.Kp = 0.375;
+    rollPid.Ki = 0.0165;
+    rollPid.Kd = 0.000;
+
     /* Configure GPIO */
     gpio_config_t receiverGpioConfig = {
         .pin_bit_mask = RECEIVER_GPIO_PIN_SEL,
@@ -173,39 +207,6 @@ void app_main(void)
     Sbus_SetChannel(&PretoFlyteFC_SbusPayload, SBUS_AUX_1_CHANNEL, SBUS_CHANNEL_VALUE(0.00));
     Sbus_SetChannel(&PretoFlyteFC_SbusPayload, SBUS_AUX_2_CHANNEL, SBUS_CHANNEL_VALUE(1.00));
 
-    double pitch;
-    double roll;
-    double pitchRate;
-    double rollRate;
-    double sampleTime = 0;
-    int64_t previousSampleTime = 0;
-    int64_t currentTime = 0;
-
-    double prevPitch = 0;
-    double prevRoll = 0;
-    double prevPitchRate = 0;
-    double prevRollRate = 0;
-    double prevYaw = 0;
-    double prevThrottle = 0;
-    double lpAlpha = 0.7;
-
-    double targetPitch = 0;
-    double targetRoll = 0;
-
-    double pitchCmd;
-    double rollCmd;
-    double yawCmd;
-    double throttleCmd;
-
-    PretoFlyteFC_Pid_t pitchPid = {0U};
-    pitchPid.Kp = 0.375;
-    pitchPid.Ki = 0.0165;
-    pitchPid.Kd = 0.000;
-    PretoFlyteFC_Pid_t rollPid = {0U};
-    rollPid.Kp = 0.375;
-    rollPid.Ki = 0.0165;
-    rollPid.Kd = 0.000;
-
     Kalman_1dFilterInit(&PretoFlyteFC_PitchFilter, 0, 5, 1.5, 0.5);
     Kalman_1dFilterInit(&PretoFlyteFC_RollFilter, 0, 5, 1.5, 0.5);
 
@@ -236,11 +237,11 @@ void app_main(void)
         roll = -atan2(PretoFlyteFC_Lsm9ds1Handle.Accel.Reading.Y, PretoFlyteFC_Lsm9ds1Handle.Accel.Reading.Z);
         rollRate = PretoFlyteFC_Lsm9ds1Handle.Gyro.Reading.X;
 
-        ESP_LOGI(PretoFlyteFC_LogTag, "Ax: %.02lf, Ay: %.02lf, Az: %.02lf",
+        ESP_LOGD(PretoFlyteFC_LogTag, "Ax: %.02lf, Ay: %.02lf, Az: %.02lf",
                  PretoFlyteFC_Lsm9ds1Handle.Accel.Reading.X,
                  PretoFlyteFC_Lsm9ds1Handle.Accel.Reading.Y,
                  PretoFlyteFC_Lsm9ds1Handle.Accel.Reading.Z);
-        ESP_LOGI(PretoFlyteFC_LogTag, "Gx: %.02lf, Gy: %.02lf, Gz: %.02lf",
+        ESP_LOGD(PretoFlyteFC_LogTag, "Gx: %.02lf, Gy: %.02lf, Gz: %.02lf",
                  PretoFlyteFC_Lsm9ds1Handle.Gyro.Reading.X,
                  PretoFlyteFC_Lsm9ds1Handle.Gyro.Reading.Y,
                  PretoFlyteFC_Lsm9ds1Handle.Gyro.Reading.Z);
@@ -249,14 +250,14 @@ void app_main(void)
         pitch *= 180.0 / M_PI;
         roll *= 180.0 / M_PI;
 
-        /* Correct DC? */
+        /* Correct DC */
         pitch -= 1.6;
         roll += 1.5;
         pitchRate += 1.4;
         rollRate += 1.3;
 
-        // ESP_LOGI(PretoFlyteFC_LogTag, "Pitch[Raw]: %.02lf deg, Roll[Raw]: %.02lf deg", pitch, roll);
-        // ESP_LOGI(PretoFlyteFC_LogTag, "Pitch[Rate]: %.02lf deg, Roll[Rate]: %.02lf deg", pitchRate, rollRate);
+        ESP_LOGD(PretoFlyteFC_LogTag, "Pitch[Raw]: %.02lf deg, Roll[Raw]: %.02lf deg", pitch, roll);
+        ESP_LOGD(PretoFlyteFC_LogTag, "Pitch[Rate]: %.02lf deg, Roll[Rate]: %.02lf deg", pitchRate, rollRate);
 
         /* Apply low pass filter */
         pitch = (lpAlpha * prevPitch) + ((1.0 - lpAlpha) * pitch);
@@ -276,14 +277,14 @@ void app_main(void)
         /* Apply 1D Kalman filter to pitch and roll */
         Kalman_1dFilter(&PretoFlyteFC_PitchFilter, pitchRate, pitch, sampleTime);
         Kalman_1dFilter(&PretoFlyteFC_RollFilter, rollRate, roll, sampleTime);
-        // ESP_LOGI(PretoFlyteFC_LogTag, "Pitch[Filter]: %.02lf deg, Roll[Filter]: %.02lf deg", PretoFlyteFC_PitchFilter.State, PretoFlyteFC_RollFilter.State);
+        ESP_LOGD(PretoFlyteFC_LogTag, "Pitch[Filter]: %.02lf deg, Roll[Filter]: %.02lf deg", PretoFlyteFC_PitchFilter.State, PretoFlyteFC_RollFilter.State);
 
         /* Apply PID controller */
         targetPitch = (ReceiverPitchPercentage * (ANGLE_MAX - ANGLE_MIN)) - ANGLE_MAX;
         targetRoll = (ReceiverRollPercentage * (ANGLE_MAX - ANGLE_MIN)) - ANGLE_MAX;
         PretoFlyteFC_Pid(&pitchPid, targetPitch, PretoFlyteFC_PitchFilter.State, sampleTime);
         PretoFlyteFC_Pid(&rollPid, targetRoll, PretoFlyteFC_RollFilter.State, sampleTime);
-        // ESP_LOGI(PretoFlyteFC_LogTag, "Pitch[Pid]: %.02lf deg, Roll[Pid]: %.02lf deg", pitchPid.Output, rollPid.Output);
+        ESP_LOGD(PretoFlyteFC_LogTag, "Pitch[Pid]: %.02lf deg, Roll[Pid]: %.02lf deg", pitchPid.Output, rollPid.Output);
         pitchCmd = pitchPid.Output;
         rollCmd = rollPid.Output;
 
@@ -295,7 +296,7 @@ void app_main(void)
         pitchCmd = (pitchCmd + ANGLE_MAX) / (ANGLE_MAX - ANGLE_MIN);
         rollCmd = (rollCmd + ANGLE_MAX) / (ANGLE_MAX - ANGLE_MIN);
 
-        // ESP_LOGI(PretoFlyteFC_LogTag, "Pitch[Cmd]: %.02lf deg, Roll[Cmd]: %.02lf deg", pitchCmd, rollCmd);
+        ESP_LOGD(PretoFlyteFC_LogTag, "Pitch[Cmd]: %.02lf deg, Roll[Cmd]: %.02lf deg", pitchCmd, rollCmd);
 
         /* Transmit angle percentages */
         Sbus_SetChannel(&PretoFlyteFC_SbusPayload, SBUS_PITCH_CHANNEL, SBUS_CHANNEL_VALUE(pitchCmd));
