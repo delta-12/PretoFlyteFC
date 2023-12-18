@@ -2,10 +2,6 @@
 
 Simple quadcopter flight controller based on an ESP32 and LSM9DS1
 
-# NOTE: THIS README IS STILL IN PROGRESS.
-
-This note will be removed to indicate that the README is finished. While this note remains, it should be assumed that this README is still a work in progress. I would greatly appreciate final consideration after this note has been removed.
-
 ## Table of Contents
 
 <!-- TODO re-organize table of contents (repo org and build instr after design overview?) -->
@@ -48,7 +44,7 @@ simply click on it.
 
 ## Design Overview
 
-<!-- TODO insert picture of complete build and potentially video -->
+![Complete flight controller and quadcopter](assets/complete_quadcopter.png)_Complete flight controller and quadcopter_
 
 PretoFlyteFC is a simple flight controller for a small to medium-sized quadcopter and its purpose is to
 stabilize roll and pitch. It primarily consists of an ESP32 microcontroller and an 9-axis LSM9DS1 inertial
