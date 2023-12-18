@@ -19,24 +19,14 @@ Simple quadcopter flight controller based on an ESP32 and LSM9DS1
   - [Radio Control System](#radio-control-system)
   - [IMU](#imu-1)
   - [SBUS](#sbus)
-  - [Github Actions](#github-actions)
-  - [Bill of Materials](#bill-of-materials)
+    <!-- - [Github Actions](#github-actions) -->
+    <!-- - [Bill of Materials](#bill-of-materials) -->
 - [Design Testing](#design-testing)
 - [Summary, Conclusions, and Future Work](#summary-conclusions-and-future-work)
 - [Repository Organization](#repository-organization)
 - [Build Instructions](#build-instructions)
 
 ## Design Overview
-
-<!-- In this section, you should provide a detailed description of your design.
-
-- [x] Start with a high-level description of your design and its purpose.
-- [ ] Discuss the original design concepts that you considered (at a high level) and then your
-      final design. This document is not only a description of the technical aspects of your
-      design, but it is also a digest of your design process.
-- [ ] Clearly explain how your project expands and builds on previous works (i.e. justifications
-      for a 6-week project)
-- [ ] Don’t forget to cite your references and include images/schematics. -->
 
 PretoFlyteFC is a simple flight controller for a small to medium-sized quadcopter and its purpose is to
 stabilize roll and pitch. It primarily consists of an ESP32 microcontroller and an 9-axis LSM9DS1 inertial
@@ -163,7 +153,9 @@ This board was chosen in part for its small form factor, making it lightweight a
 small breadboard, and it highly capable ESP32-PICO-D4 SoC. The radio receiver's PWM outputs connect to
 standard GPIO inputs on the ESP32 and the IMU communicates over SPI. The ESP32 receives 5V power from
 the ESC via the F4 Noxe v3 and outputs the SBUS UART signal to the F4 Noxe v3 via a Sparkfun logic level
-converter which converts the 3.3V logic from the ESP32 to the 5V logic required by the F4 Noxe v3.
+converter which converts the 3.3V logic from the ESP32 to the 5V logic required by the F4 Noxe v3. The
+flight control software in this repository does not require any additional dependenices or libraries
+aside from the ESP-IDF SDK and the standard C library.
 
 <!-- TODO complete wiring diagram -->
 
@@ -273,9 +265,30 @@ X, Y, and Z registers for each sensor.
 
 ### SBUS
 
-### Github Actions
+For a detailed description of the SBUS, see the documentation for the Bolder Flight Systems SBUS
+Arduino library found at [https://github.com/bolderflight/sbus](https://github.com/bolderflight/sbus).
 
-### Bill of Materials
+Writing a driver to implement the SBUS protocol was fairly straightword since SBUS is a relatively simple
+serial communication protocol built on top of UART. SBUS was used to send the roll, pitch, yaw, and throttle
+commands output from the PretoFlyteFC control loop to the F4 Noxe v3, which acted as an SBUS-to-DSHOT gateway
+between the ESP32 and ESC. The driver uses the SDK to initialize an inverted UART interface. It provides a
+method for setting individual channel values and packing and transmitting the bits for each channel according
+to the specification found in the detailed SBUS description listed above. Since data only needed to be
+sent and not receiver, a single TX/RX UART line from the ESP32 to the F4 Noxe v3 was all that was required to
+connect the two controllers. An emergency cutoff switch was also soldered into the green TX/RX line in the
+image below away from the props so that could communication could manually terminated as a last resort should
+the quadcopter stop responding to inputs from the radio receiver, lose contact with the transmitter, or go
+wildly unstable.
+
+![SBUS wiring](assets/sbus_wires.drawio.png)
+
+_SBUS wiring to F4 Noxe v3_
+
+<!-- ### Github Actions -->
+<!-- TODO -->
+
+<!-- ### Bill of Materials -->
+<!-- TODO -->
 
 ## Design Testing
 
