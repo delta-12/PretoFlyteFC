@@ -30,6 +30,11 @@ This note will be removed to indicate that the README is finished. While this no
     <!-- - [Github Actions](#github-actions) -->
     <!-- - [Bill of Materials](#bill-of-materials) -->
 - [Design Testing](#design-testing)
+  - [Re-pinning the flight controller to ESC connector](#re-pinning-the-flight-controller-to-esc-connector)
+  - [IMU driver debugging](#imu-driver-debugging)
+  - [Plotter](#plotter)
+  - [SBUS driver testing with Betaflight configuration tool](#sbus-driver-testing-with-betaflight-configuration-tool)
+  - [Flying and PID Tuning](#flying-and-pid-tuning)
 - [Conclusion](#conclusion)
   - [Future Work](#future-work)
 - [Repository Organization](#repository-organization)
