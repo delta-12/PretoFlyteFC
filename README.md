@@ -234,7 +234,20 @@ $$
 - $f_i[n]$ is the new instantaneous measurement
 - $\alpha$ is a positive parameter less than 1 that determines the cutoff frequency
 
-<!-- TODO insert low pass filter code -->
+Here is an example of how the low pass filter was implemented in C and applied to the calculations
+based on the IMU sensor readings.
+
+```c
+/* Apply low pass filter to pitch, roll, pitch rate, and roll rate calculated from IMU */
+pitch = (lpAlpha * prevPitch) + ((1.0 - lpAlpha) * pitch);
+roll = (lpAlpha * prevRoll) + ((1.0 - lpAlpha) * roll);
+pitchRate = (lpAlpha * prevPitchRate) + ((1.0 - lpAlpha) * pitchRate);
+rollRate = (lpAlpha * prevRollRate) + ((1.0 - lpAlpha) * rollRate);
+prevPitch = pitch;
+prevRoll = roll;
+prevPitchRate = pitchRate;
+prevRollRate = rollRate;
+```
 
 #### Kalman filter
 
@@ -294,7 +307,30 @@ measurement. If the measurement is highly reliable (low noise), the Kalman gain 
 measurement. If the measurement is less reliable, it will give more weight to the predicted state. This is
 what makes the Kalman filter effective in dealing with noisy measurements and uncertainties.
 
-<!-- TODO insert Kalman filter code -->
+Below is my implementation in C of a one dimensional Kalman filter.
+
+```c
+void Kalman_1dFilter(Kalman_1dFilterContext_t *const context, const Kalman_Rate_t rate, const Kalman_Measurement_t measurement, const Kalman_SampleTimeSeconds_t sampleTime)
+{
+    if (context != NULL)
+    {
+        /* Predict current state */
+        context->State += sampleTime * rate;
+
+        /* Calculate uncertainty of prediction */
+        context->Uncertainty += (sampleTime * sampleTime) + (context->RateVariation * context->RateVariation);
+
+        /* Calculate Kalman gain */
+        double kalmanGain = context->Uncertainty / (context->Uncertainty + (context->MeasurementVariation * context->MeasurementVariation));
+
+        /* Update prediction with measurement through the Kalman gain */
+        context->State += kalmanGain * (measurement - context->State);
+
+        /* Update uncertainty of prediction */
+        context->Uncertainty = (1.0 - kalmanGain) * context->Uncertainty;
+    }
+}
+```
 
 #### PID control
 
@@ -331,7 +367,23 @@ $$
 - $e[n - 1]$ is the previous sampled error
 - $T$ is sample time
 
-<!-- TODO insert PID code -->
+Below is my implementation of the discrete PID control in C.
+
+```c
+static void PretoFlyteFC_Pid(PretoFlyteFC_Pid_t *const pid, const double setpoint, const double process, const double sampleTime)
+{
+    if (pid != NULL)
+    {
+        double error = setpoint - process;
+        double derivative = (error - pid->PrevError) / sampleTime;
+        pid->Integral += error * sampleTime;
+
+        pid->Output = (pid->Kp * error) + (pid->Ki * pid->Integral) + (pid->Kd * derivative);
+
+        pid->PrevError = error;
+    }
+}
+```
 
 ### Motors and ESC
 
@@ -453,7 +505,7 @@ after the actions finish running.
 ![Github Actions example](assets/github_actions.png)_Github Actions example: static analysis fails and produces report, build check passes_
 
 <!-- ### Bill of Materials -->
-<!-- TODO -->
+<!-- TODO BoM -->
 
 ## Design Testing
 
@@ -640,6 +692,8 @@ in its learning objectives.
     └── cppcheck
 ```
 
+<!-- TODO list all files and giving brief explanation -->
+
 ## Build Instructions
 
 1. Install ESP-IDF (Espressif IoT Development Framework) for building firmware targeting the ESP32.
@@ -694,3 +748,7 @@ in its learning objectives.
 
 Special thanks to Tyler Hansen for providing 3D-printed feet for the quadcopter and filming test videos,
 and to Bronco York for assisting with tuning tests.
+
+```
+
+```

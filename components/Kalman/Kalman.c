@@ -41,6 +41,6 @@ void Kalman_1dFilter(Kalman_1dFilterContext_t *const context, const Kalman_Rate_
         context->State += kalmanGain * (measurement - context->State);
 
         /* Update uncertainty of prediction */
-        context->Uncertainty = (1 - kalmanGain) * context->Uncertainty;
+        context->Uncertainty = (1.0 - kalmanGain) * context->Uncertainty;
     }
 }
