@@ -186,6 +186,8 @@ breadboard in the final design.
 
 _PretoFlyteFC breadboard_
 
+<!-- TODO software hierarchy diagram -->
+
 ### Control Architecture
 
 ![Control Loop](assets/control_architecture_background.drawio.png)_Control loop_
@@ -233,6 +235,8 @@ $$
 - $f[n - 1]$ is the previous result
 - $f_i[n]$ is the new instantaneous measurement
 - $\alpha$ is a positive parameter less than 1 that determines the cutoff frequency
+
+<!-- TODO insert low pass filter code -->
 
 #### Kalman filter
 
@@ -292,6 +296,8 @@ measurement. If the measurement is highly reliable (low noise), the Kalman gain 
 measurement. If the measurement is less reliable, it will give more weight to the predicted state. This is
 what makes the Kalman filter effective in dealing with noisy measurements and uncertainties.
 
+<!-- TODO insert Kalman filter code -->
+
 #### PID control
 
 PID stands for Proportional-Integral-Derivative, and it's a mechanism to keep a system at a desired setpoint. In
@@ -326,6 +332,8 @@ $$
 - $e[n]$ is the current sampled error
 - $e[n - 1]$ is the previous sampled error
 - $T$ is sample time
+
+<!-- TODO insert PID code -->
 
 ### Motors and ESC
 
@@ -552,11 +560,49 @@ in its learning objectives.
 ### Future Work
 
 - Improve IMU driver and filtering
-- Develop physical model of the system, better PID tuning, build rig for tuning
-- Implement complete control loop from original design, control ESC directly
+
+  The IMU driver more or less uses the default IMU settings. It also focus on only using the accelerometer and
+  gyroscope. The driver could be extended for greater magnetometer support as well as more configuration options
+  for setting sensor rates and using features such as built-in low pass filters in hardware.
+
+- Develop physical model of the system for better PID tuning
+
+  Physical properties such as weight, center of gravity, and motor thrust and torque could be measured to develop
+  a dynamic model of the system. Having a model as such would allow for simulation and estimation of gains before
+  ever flying the quadcopter, making it more stable in its initial flight and easier to tune later by hand.
+
+- Build a rig for tuning
+
+  Rather than flying the drone to get a sense of how it should be tuned, a gimbal or other rig could be constructed
+  to constain the linear movement of the drone while still allowing it to rotate in three dimensions. This would
+  make it easier to observe how changing the PID gains affects the flight characteristics and minimizes the risk
+  of damage from crashes as a result of poor tuning.
+
+- Control the ESC directly and implement complete control loop from original design
+
+  The full control loop original envisioned could be implemented if the ESC could be directly controlled. This
+  would probably involve some more high-frequency level shifting hardware and something like a DHSOT driver.
+  However, if the ESC could be controlled directly, it would eliminate the need for the F4 Noxe v3 as a secondary
+  flight controller/gateway device, and allow for angular rate control and custom motor mixing.
+
 - Perf board, PCB
+
+  Move the hardware components, including the ESP32, level shifter, and LSM9DS1 IMU, from the breadboard to perf
+  board, and eventually to a PCB.
+
 - Balance the quadcopter
+
+  After measuring the weight and center of gravity, hardware on the quadcopter could be repositioned on the frame
+  for better which distribution which in turn would lead to greater stability and better handling characteristics.
+
 - Higher loop rates
+
+  The ESP-IDF SDK uses a port of [FreeRTOS](https://www.freertos.org/), which means that context switches between
+  tasks by default occur at 100Hz. This means that individual tasks must periodically yeild for at least 10ms,
+  effectively constraining control loop rates to a period of 10ms or a frequency of 100Hz. 100Hz is not quite fast
+  enough for stable flight control and is part of the reason why the quadcopter was not fully stable at the
+  conclusion of this project. In the future, the code could be ported away from FreeRTOS to bare metal or to a more
+  lightweight scheduler that allowed context switchting, and therefore loop rates, at a frequencies greater than 100Hz.
 
 ## Repository Organization
 
@@ -579,11 +625,53 @@ in its learning objectives.
 
 ## Build Instructions
 
-1. Install ESP-IDF SDK
-2. Clone repo with submodules
+1. Install ESP-IDF (Espressif IoT Development Framework) for building firmware targeting the ESP32.
+
+   See [https://docs.espressif.com/projects/esp-idf/en/latest/esp32/get-started/](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/get-started/).
+
+   Alternatively, see the [Docker](#docker) section.
+
+   For information on how ESP-IDF is used in this project, see the [ESP-IDF](#esp-idf) section.
+
+2. Clone the repository.
+
+   Make sure to include the `--recurse-submodules` option when cloning, e.g. `git clone git@github.com:delta-12/PretoFlyteFC.git --recurse-submodules`.
+
 3. Build Cppcheck
-4. idf.py build, flash, monitor
-5. Make modifications, perform static analysis with Cppcheck
+
+   This project uses Cppcheck for static analysis. Cppcheck is submoduled in the `tools` directory. To setup Cppcheck, run `git submodule update --init` if the `--recurse-submodules` option was not included when cloning the repository, and follow the instructions for compiling Cppcheck with CMake found [here](https://github.com/danmar/cppcheck/#cmake). CMake should already be installed during the ESP-IDF installation process. The project's CMake configuration will automatically search for the Cppcheck binary in the Cppcheck submodule `build` directory.
+
+   Note: When following the instructions to compile Cppcheck using CMake, commands should be run from within the `tools/cppcheck` directory.
+
+4. Build, flash, and monitor
+
+   The flight control software can be built by running the ESP-IDF build command.
+
+   `idf.py build`
+
+   Firmware can be flashed to an ESP32 with ESP-IDF using the flash command.
+
+   `idf.py -p PORT flash`
+
+   Replace `PORT` with the port of the device you are flashing, e.g. `idf.py -p /dev/ttyUSB0 flash`.
+
+   After flashing a device, its output can be monitored using the monitor command.
+
+   `idf.py -p PORT monitor`
+
+   Again, replace `PORT` with the port of the device you are monitoring, e.g. `idf.py -p /dev/ttyUSB0 monitor`. To exit from the monitor command, use `Ctrl + ]`.
+
+   These two commands can also be combined as follows:
+
+   `idf.py -p PORT flash monitor`
+
+   e.g. `idf.py -p /dev/ttyUSB0 flash monitor`
+
+5. Make modifications and perform static analysis with Cppcheck.
+
+   `idf.py cppcheck`
+
+   This will generate a report named `cppcheck_report.xml` in the project's build directory.
 
 ## Acknowledgements
 
