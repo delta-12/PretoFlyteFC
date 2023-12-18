@@ -496,6 +496,11 @@ was trying to take corrective action.
 
 ![Betaflight receiver](assets/betaflight_receiver.png)_Monitoring "receiver" in Betaflight configuration tool_
 
+After verifying the SBUS driver was working, a basic test program was written for the ESP32 to verify that the
+motors could actually be spun up and controlled via the F4 Noxe v3 as seen below.
+
+[![SBUS motor test](https://youtu.be/TANsgykJUjY)](https://youtu.be/TANsgykJUjY)
+
 ### Flying and PID Tuning
 
 <!-- TODO Videos of test flights -->
