@@ -236,9 +236,40 @@ balance and stability of the system while PretoFlyteFC hardware was zip-tied to 
 
 ### Radio Control System
 
-<!-- Interrupt configuration and timing diagram to illustrate -->
+<!-- TODO Interrupt configuration and timing diagram to illustrate -->
+
+To read the PWM signals from the radio receiver, the GPIO inputs were configured with interrupts on both
+rising and falling edges. When the an interrupt is triggered on one of these GPIO pins, the current time
+in microseconds and GPIO pin level (logic low or high) is recorded by the interrupt handler. The time
+between interrupts on the rising and falling edge of the PWM signal is then used to calculate the current
+duty cycle given a PWM frequency of 50Hz. The maximum and minimum duty cycle for each channel was measured
+using an oscilliscope and thus the duty cycle can be converted to a percentage of range between the minimum
+and maximum. These percentages are used as the commanded pitch and roll values.
+
+The ADC was also considered as an alternative to interrupts to read the current PWM values, but this method
+was not pursued because of the need to continuously sample and average the PWM signals as well as possible
+quantization errors.
 
 ### IMU
+
+The SPI driver for the LSM9DS1 was written to more or less use the IMU's default settings. The IMU has one
+set of registers for operating the accelerometer and gyroscope and another set of register for the
+magnetometer. Because the magnetometer was not used in this project, the driver mainly focuses on the
+accelerometer and gyroscope.
+
+The following diagram illustrates how to communicate with the accelerometer and gyroscope over SPI.
+Registers can be read from or written to by setting the RW bit and then specifying the 7-bit address of the
+register in question. The following byte is the data read from or written to the register.
+
+![LSM9DS1 accelerometer/gyroscope SPI protocol](assets/imu_spi_protocol.png)
+
+_LSM9DS1 accelerometer/gyroscope SPI protocol; Source: https://cdn.sparkfun.com/assets/learn_tutorials/3/7/3/LSM9DS1_Datasheet.pdf_
+
+The driver initializes the accelerometer and gyropscope by writing configuration values to specific control
+registers and calibrates the sensors by filling the hardware FIFO on the IMU and averaging the readings to
+calculate a bias that is subtracted from all subsequent readings. The driver provides methods to check the
+registers that indicate if accelerometer or gyroscope data is available and read any available date from the
+X, Y, and Z registers for each sensor.
 
 ### SBUS
 
