@@ -184,8 +184,6 @@ breadboard in the final design.
 
 _PretoFlyteFC breadboard_
 
-<!-- TODO software hierarchy diagram -->
-
 ### Control Architecture
 
 ![Control Loop](assets/control_architecture_background.drawio.png)_Control loop_
@@ -652,21 +650,58 @@ in its learning objectives.
 ```
 ├── .github
 │   └── workflows
+|       └── ci.yml
 ├── assets
 ├── components
 |   ├── Kalman
-|   |   └── include
+|   |   ├── include
+|   |   |    └── Kalman.h
+|   |   ├── CMakeLists.txt
+|   |   ├── idf_component.yml
+|   |   └── Kalman.c
 |   ├── Lsm9ds1
-|   |   └── include
+|   |   ├── include
+|   |   |   ├── Lsm9ds1_Registers.h
+|   |   |   └── Lsm9ds1.h
+|   |   ├── CMakeLists.txt
+|   |   ├── idf_component.yml
+|   |   └── Lsm9ds1.c
 │   └── Sbus
-|       └── include
+|       ├── include
+|       |   └── Sbus.h
+|       ├── CMakeLists.txt
+|       ├── idf_component.yml
+|       └── Sbus.c
 ├── main
-│   └── include
-└── tools
-    └── cppcheck
+|   ├── CMakeLists.txt
+│   └── PretoFlyte.c
+├── tools
+|   ├── cppcheck
+|   └── plotter.py
+├── .gitignore
+├── .gitmodules
+├── CMakeLists.txt
+├── README.md
+├── sdkconfig
+└── suppressions.xml
 ```
 
-<!-- TODO list all files and giving brief explanation -->
+The `.github` directory contains the configuration for the static analysis and build checks that run on Github actions.
+
+The `assets` directory contains images used in `README.md`.
+
+The `components` directory contains code for the drivers and Kalman filter. Each component is structured in the same manner.
+An `include` subdirectory contains the C header with shared code such as macros, types, and function prototypes. A
+`CMakeLists.txt` file has CMake instructions for building the particular component. `idf_component.yml` is the ESP IDF
+component manifest and the C file is the implementation of the component itself.
+
+The `main` directory contains the main code for the flight control loop including the low pass filter and PID code.
+It too has a `CMakeLists.txt` for building it as well.
+
+The `tools` directory contains tools for working with the repository including Cppcheck and the Python plotter.
+
+In the root of the repository are the standard Git files, this README, a top-level `CMakeLists.txt` file, ESP IDF
+configuration file, and a Cppcheck suppressions file for exceptions to the default ruleset.
 
 ## Build Instructions
 
