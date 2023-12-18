@@ -1,6 +1,8 @@
 # PretoFlyteFC
 
-Simple quadcopter flight controller based on an ESP32 and LSM9DS1
+Simple quadcopter flight controller based on an ESP32 and LSM9DS1.
+
+_This project was the final design project for ECE 1895: Junior Design Fundamentals at the University of Pittsburgh, Swanson School of Engineering._
 
 ## Table of Contents
 
@@ -503,6 +505,12 @@ crucial was tracking down a few bugs that were difficult to diagnose by looking 
 ![Logic analyzer connected to breadboard](assets/logic_analyzer_and_breadboard.jpg)_Logic analyzer connected to breadboard_
 
 ![SPI decoded in Scopy](assets/scopy_logic_analyzer.png)_SPI decoded in Scopy_
+
+After debugging the IMU driver and successfully establishing communication with the LSM9DS1, debug information
+including the raw linear acceleration vectors, raw angular rate vectors, and roll and pitch were printed out over
+serial to verify that the driver and IMU were working correctly.
+
+![IMU debug information](assets/pitch_and_roll_test.png)_IMU debug information_
 
 ### Plotter
 
