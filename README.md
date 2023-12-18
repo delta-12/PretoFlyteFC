@@ -4,7 +4,7 @@ Simple quadcopter flight controller based on an ESP32 and LSM9DS1
 
 # NOTE: THIS README IS STILL IN PROGRESS.
 
-This note will be removed to indicate that the README is finished. While this note remains, it should be assumed that this README is still a work in progress.
+This note will be removed to indicate that the README is finished. While this note remains, it should be assumed that this README is still a work in progress. I would greatly appreciate final consideration after this note has been removed.
 
 ## Table of Contents
 
@@ -18,6 +18,10 @@ This note will be removed to indicate that the README is finished. While this no
   - [Radio Transmitter/Receiver](#radio-transmitterreceiver)
 - [Design Implementation](#design-implementation)
   - [Control Architecture](#control-architecture)
+    - [Accelerometer Trigonometry and Gyroscope Rates](#accelerometer-trigonometry-and-gyroscope-rates)
+    - [Low pass filter](#low-pass-filter)
+    - [Kalman filter](#kalman-filter)
+    - [PID control](#pid-control)
   - [Motors and ESC](#motors-and-esc)
   - [Quadcopter Frame](#quadcopter-frame)
   - [Radio Control System](#radio-control-system)
@@ -40,7 +44,7 @@ measurement unit (IMU), which is equipped an accelerometer, gyroscope, and magne
 operators cannot react fast enough to even small perturbations in a quadcopter's flight, thus necessitating
 additional control systems in the form of a flight controller to achieve stable flight. At a high level,
 PretoFlyteFC works by reading in data from the accelerometer and gyroscope, filtering the signals,
-inputting the filtered data and commanded angular set points into a PID (Proportional, Integral, Derivative)
+inputting the filtered data and commanded angular set points into a PID (Proportional-Integral-Derivative)
 contrl loop, and outputting roll and pitch signals that can then be used to control motor speed to achieve
 the desired set point.
 
@@ -195,14 +199,46 @@ of the gyroscope vector.
 
 #### Low pass filter
 
+Because the input from the radio receiver and IMU seemed to have high frequency noise, a first order low
+pass filter implemented in software was applied to both. The low pass filter was implemented using the
+following equation and an alpha value of 0.7 was found to be ideal after some testing. Without the
+low pass filter, the quadcopter was prone to sudden, violent de-stabilizing movement as a result of high
+frequency noise.
+
+f[n] = &alpha;f[n - 1] + (1 - &alpha;)fi[n], where
+
+- f[n] is the filtered estimate
+- f[n - 1] is the previous result
+- fi[n] is the new instantaneous measurement
+
 #### Kalman filter
 
-Accelerometer is very susceptible to vibrations and the gyroscope tends to drift over time, need a way to fuse
-the reading for a more accurate measurement. This is the purpose of the Kalman filter.
+The IMU's accelerometer is very susceptible to vibrations and the gyroscope tends to drift over time,
+thus a method is needed to combine readings for a more accurate measurement of pitch and roll. This
+is the purpose of the Kalman filter. Generally speaking, the Kalman filter combines the prediction
+of an system's state with noisy measurements to produce a more accurate and smooth estimate in a
+process known as sensor fusion. In this case, a one dimensional Kalman filter will be used to fuse
+data from the noisy acceleromter and gyroscope to get a better estimated of the roll and pitch of the
+quadcopter. The Kalman filter will iterate over the following steps, refining its estimate over time.
 
-With a little bit of simplification, a one dimensional Kalman filter looks like the following.
+1. Predicition
+2. Measurement
+3. Update
+4. Covariance Update
 
-#### PID loop
+#### PID control
+
+PID stands for Proportional-Integral-Derivative, and it's a mechanism to keep a system at a desired setpoint. In
+this case, it will be used to maintain the command roll and pitch angles of the quadcopter. The proportional
+component responds to the current current error, which is the difference between the desired setpoint and the
+actual state of the system. The larger the error, the more corrective action is applied. The integral component
+accumulates past error and helps eliminate peristent stead-state error. The derivative component deals with the
+rate of change and applies damping to prevent overshooting the setpoint if the state of the system to changing
+too quickly toward the setpoint.
+
+PID control can be expressed by the following equation.
+
+\[ \text{Output} = K_p \cdot \text{Error} + K_i \cdot \int \text{Error} \, dt + K_d \cdot \frac{d(\text{Error})}{dt} \]
 
 ### Motors and ESC
 
@@ -287,7 +323,7 @@ X, Y, and Z registers for each sensor.
 ### SBUS
 
 For a detailed description of the SBUS, see the documentation for the Bolder Flight Systems SBUS
-Arduino library found at [https://github.com/bolderflight/sbus](https://github.com/bolderflight/sbus).
+Arduino library found at [https://github.com/bolderflight/sbus?tab=readme-ov-file#description](https://github.com/bolderflight/sbus?tab=readme-ov-file#description).
 
 Writing a driver to implement the SBUS protocol was fairly straightword since SBUS is a relatively simple
 serial communication protocol built on top of UART. SBUS was used to send the roll, pitch, yaw, and throttle
