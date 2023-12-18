@@ -2,6 +2,10 @@
 
 Simple quadcopter flight controller based on an ESP32 and LSM9DS1
 
+# NOTE: THIS README IS STILL IN PROGRESS.
+
+This note will be removed to indicate that the README is finished. While this note remains, it should be assumed that this README is still a work in progress.
+
 ## Table of Contents
 
 <!-- TODO re-organize table of contents (repo org and build instr after design overview?) -->
@@ -339,7 +343,7 @@ _SBUS wiring to F4 Noxe v3_
 <!-- Write a brief summary of your project and your conclusions from this assignment. Include a detailed
 discussion of changes you would make to improve the design if you were to do another design iteration. -->
 
-<!-- Videos of flights -->
+<!-- TODO Videos of flights -->
 
 - Improve IMU driver and filtering
 - Develop physical model of the system, better PID tuning, build rig for tuning
