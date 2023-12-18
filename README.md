@@ -34,6 +34,11 @@ This note will be removed to indicate that the README is finished. While this no
 - [Repository Organization](#repository-organization)
 - [Build Instructions](#build-instructions)
 
+### Note:
+
+Some images in this document maybe hard to see depending on the markdown viewer. To see the full size image,
+simply click on it.
+
 ## Design Overview
 
 <!-- TODO insert picture of complete build and potentially video -->
@@ -180,7 +185,8 @@ frequency noise was observed in the input signals during testing. Next, the filt
 are compared with the roll and pitch feedback measured by the IMU to generate an error signal that expresses
 how far from the desired angular setpoint the quadcopter currently is. PID control is then applied to these
 values and the output from this is what is ultimately converted to the signals sent to the F4 Noxe v3 which
-commands the ESC and actuates the quadcopter.
+commands the ESC and actuates the quadcopter. Angular outputs from the PID control were constrained to no
+more than 50 degrees in either direction about an axis.
 
 #### Accelerometer Trigonometry and Gyroscope Rates
 
@@ -479,7 +485,16 @@ to verify that roll and pitch were calculated and filtered correctly.
 
 ### SBUS driver testing with Betaflight configuration tool
 
-### Arming the Drone
+The Betalfight configuartion tool was used to verify the correct angular commands were being sent from the
+ESP32 to the F4 Noxe v3 over SBUS by monitoring the "receiver" channel values. Recall the the ESP32
+masquerades as a radio receiver to send commands output by its control loop to the F4 Noxe v3. In addition
+to displaying the roll, pitch, yaw, and throttle channel values, the configuration tool also had a helpful
+animation displaying how the quadcopter would behave for a given set of inputs. For instance, if the
+quadcopter was rolled in one direction without changing the commanded roll, the animation in the
+configuration tool would display it rolling in the opposite direction, confirming that the PID control
+was trying to take corrective action.
+
+![Betaflight receiver](assets/betaflight_receiver.png)_Monitoring "receiver" in Betaflight configuration tool_
 
 ### Flying and PID Tuning
 
