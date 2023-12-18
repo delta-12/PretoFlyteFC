@@ -172,7 +172,7 @@ converter which converts the 3.3V logic from the ESP32 to the 5V logic required 
 flight control software in this repository does not require any additional dependenices or libraries
 aside from the ESP-IDF SDK and the standard C library.
 
-<!-- TODO complete wiring diagram -->
+![PretoFlyteFC wiring diagram](assets/full_wiring_diagram.png)
 
 _PretoFlyteFC wiring diagram_
 
@@ -509,34 +509,6 @@ after the actions finish running.
 
 ## Design Testing
 
-<!-- Write a summary of testing results from your final prototype in this section.
-
-- Explain your test plan, the procedures you use to test your design and the outcomes from
-  those test.
-- Include photos of the assembled prototype, and photos from any testing results
-- If you had unsuccessful attempts, include write-ups of those attempts and how you remedied
-  those issues.
-- Make sure to document your debugging process and any challenges that came about.
-- If your design is not fully functional, make sure to include write-ups on WHY it is not
-  functioning
-- Include references to demonstration videos that you produce (e.g. youtube or videos
-  uploaded to CANVAS) showing your design functioning. Video demonstration is required to
-  be in either the report, or the final presentation. -->
-
-<!-- Testing and debugging:
-
-- Had to re-pin the connector for the FC/ESC
-- Use of logic analyzer
-- Plotter tool
-- Balance by hand
-- Fly by hand for sense of gains
-- Betaflight configuraton software to verify signals
-
-- Verified that flight controller received proper SBUS commands using flight controller configuration software (SBUS driver and level shifting)
-- Already had two IMU in possession, researched the difficulty for building a driver for each, ended using the older, less sophisticated one because easier to implement driver and simpler to work with
-- Verified IMU driver worked with breadboard, printed out pitch and roll
-- Verified the drone could be armed and props could be spun using SBUS driver -->
-
 ### Re-pinning the flight controller to ESC connector
 
 One of the issues encountered early on was that the provided cable to connect the ESC and the F4 Noxe v3 was
@@ -544,6 +516,8 @@ pinned incorrectly out of the box. After several hours struggling to spin the th
 configuration tool, a multimeter was used to determine that connections on the ESC did not match the
 connections on the F4 Noxe v3. Thus, one side of the cable had to be carefully re-pinned to match the
 pinout of the F4 Noxe v3 connector.
+
+<!-- TODO insert before and after picture -->
 
 ### IMU driver debugging
 
@@ -748,7 +722,3 @@ in its learning objectives.
 
 Special thanks to Tyler Hansen for providing 3D-printed feet for the quadcopter and filming test videos,
 and to Bronco York for assisting with tuning tests.
-
-```
-
-```
