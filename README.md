@@ -32,6 +32,8 @@ This note will be removed to indicate that the README is finished. While this no
 
 ## Design Overview
 
+<!-- TODO insert picture of complete build and potentially video -->
+
 PretoFlyteFC is a simple flight controller for a small to medium-sized quadcopter and its purpose is to
 stabilize roll and pitch. It primarily consists of an ESP32 microcontroller and an 9-axis LSM9DS1 inertial
 measurement unit (IMU), which is equipped an accelerometer, gyroscope, and magnetometer. Generally, human
@@ -138,15 +140,6 @@ or state of a given input to the transmitter.
 
 ## Design Implementation
 
-<!-- In this section, you will explain the final design you arrived at. Include
-
-- Include an overview of the overall system, described at a high level
-- Include a listing of all the relevant subcomponents developed/used in creating the
-  final software/hardware
-- If there is anything else that is notable about your design, or design practices, please
-  include it in this section. Discuss your design process in developing the system and
-  any challenges that came about. -->
-
 <!-- TODO complete system diagram -->
 
 The microcontroller selected for this project was the ESP32 because I am already in possession of several
@@ -177,11 +170,35 @@ _PretoFlyteFC breadboard_
 
 ![Control Loop](assets/control_architecture.drawio.png)_Control loop_
 
-#### Accelerometer Trigonometry
+The commanded values for the flight control loop are the roll, pitch, yaw, and throttle inputs from the radio
+in the form of PWM signals. All inputs from the radio are put through a low pass filter because lots of high
+frequency noise was observed in the input signals during testing. Next, the filtered roll and pitch inputs
+are compared with the roll and pitch feedback measured by the IMU to generate an error signal that expresses
+how far from the desired angular setpoint the quadcopter currently is. PID control is then applied to these
+values and the output from this is what is ultimately converted to the signals sent to the F4 Noxe v3 which
+commands the ESC and actuates the quadcopter.
+
+#### Accelerometer Trigonometry and Gyroscope Rates
+
+The IMU's accelerometer measures linear acceleration in three dimensions and can be used to calculate roll
+and pitch angles by applying to the following trigonometric formulas to the X, Y, and Z components of the
+vector read from the accelerometer.
+
+```
+Roll = atan2(Ay, Az)
+Pitch = atan2(-Ax, sqrt(Ay^2, Az^2))
+```
+
+The IMU's gyroscope measures angular rates in three dimesions and can be used to directly measure the rates
+at which the roll and pitch of the quadcopter are changing by simply reading the X, Y, and Z components
+of the gyroscope vector.
 
 #### Low pass filter
 
 #### Kalman filter
+
+Accelerometer is very susceptible to vibrations and the gyroscope tends to drift over time, need a way to fuse
+the reading for a more accurate measurement. This is the purpose of the Kalman filter.
 
 With a little bit of simplification, a one dimensional Kalman filter looks like the following.
 

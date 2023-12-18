@@ -236,7 +236,7 @@ void app_main(void)
         previousSampleTime = currentTime;
 
         /* Calculate pitch and roll from accelerometer */
-        /* Pitch = atan(-ax, sqrt(ay^2, az^2)) */
+        /* Pitch = atan2(-ax, sqrt(ay^2, az^2)) */
         pitch = atan2(PretoFlyteFC_Lsm9ds1Handle.Accel.Reading.X * -1.0,
                       sqrt(PretoFlyteFC_Lsm9ds1Handle.Accel.Reading.Y * PretoFlyteFC_Lsm9ds1Handle.Accel.Reading.Y +
                            PretoFlyteFC_Lsm9ds1Handle.Accel.Reading.Z * PretoFlyteFC_Lsm9ds1Handle.Accel.Reading.Z));
