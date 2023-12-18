@@ -227,7 +227,7 @@ process known as sensor fusion. In this case, a one dimensional Kalman filter wi
 data from the noisy acceleromter and gyroscope to get a better estimated of the roll and pitch of the
 quadcopter. The Kalman filter will iterate over the following steps, refining its estimate over time.
 
-1. Predicition
+1. Prediction
 2. Measurement
 3. Update
 4. Covariance Update
@@ -235,40 +235,27 @@ quadcopter. The Kalman filter will iterate over the following steps, refining it
 The one dimensional Kalman filter used in the flight controller to estimate roll and pitch angles can
 be expressed by the following equations.
 
-$$
-
+<!-- $$
 \text{Angle}_\text{Kalman}(k) = \text{Angle}_\text{Kalman}(k - 1) + T \cdot \text{Rate}(k)
-
-
 $$
 
 $$
-
 \text{Uncertainty}_\text{Angle}(k) = \text{Uncertainty}_\text{Angle}(k - 1) + T^2 \cdot \sigma^2
-
-
 $$
 
 $$
-
 \text{Gain}_\text{Kalman} = \frac{\text{Uncertainty}_\text{Angle}(k)}{\text{Uncertainty}_\text{Angle}(k) + \delta^2}
-
-
 $$
 
 $$
-
 \text{Angle}_\text{Kalman}(k) = \text{Angle}_\text{Kalman}(k) + \text{Gain}_\text{Kalman} \cdot (\text{Angle}(k) - \text{Angle}_\text{Kalman})
-
-
 $$
 
 $$
-
 \text{Uncertainty}_\text{Angle}(k) = (1 - \text{Gain}_\text{Kalman}) \cdot \text{Uncertainty}_\text{Angle}(k)
+$$ -->
 
-
-$$
+![Kalman equations](assets/kalman_equations.png)
 
 - $\text{Angle}_\text{Kalman}(k)$ is the current predicted state or angle
 - $\text{Angle}_\text{Kalman}(k - 1)$ is the previous predicted state or angle
@@ -301,10 +288,7 @@ too quickly toward the setpoint.
 PID control can be expressed by the following equation.
 
 $$
-
 \text{Output} = K_p \cdot e(t) + K_i \cdot \int e(t) \, dt + K_d \cdot \frac{d(e(t))}{dt}
-
-
 $$
 
 - $K_p$ is proportional gain
@@ -319,10 +303,7 @@ In the flight controller, the PID control equation was discretized in the follow
 roll and pitch error signals.
 
 $$
-
-\text{Output} = K*p \cdot e[n] + K_i \cdot \sum*{k=0}^{n} e[k] \cdot T + K_d \cdot \frac{e[n] - e[n-1]}{T}
-
-
+\text{Output} = K_p \cdot e[n] + K_i \cdot \sum_{k=0}^{n} e[k] \cdot T + K_d \cdot \frac{e[n] - e[n-1]}{T}
 $$
 
 - $e[n]$ is the current sampled error
