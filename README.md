@@ -70,9 +70,13 @@ motor mixing and direct communication with an electronic speed controller (ESC) 
 due to time constraints, broken parts, and difficulties communicating with the ESC, the PretoFlyteFC was
 narrowed in scope to only cover control of the roll and pitch angles.
 
-_Original design_![Quadcopter full PID loop](assets/high_level_control.drawio.png)
+![Quadcopter full PID loop](assets/high_level_control_background.drawio.png)
 
-_Revised design_![Quadcopter revised PID loop](assets/high_level_control_revised.drawio.png)
+_Original design_
+
+![Quadcopter revised PID loop](assets/high_level_control_revised_background.drawio.png)
+
+_Revised design_
 
 The quadcopter used to test and validate PretoFlyteFC was built from the SpeedyFPV 220 Racing Drone Kit
 purchased from [Amazon.com](https://a.co/d/abwnG7r). The kit contains nearly all the essentials needed to
@@ -132,7 +136,7 @@ controllers called SBUS. The F4 Noxe would then use DSHOT to communicate with th
 writing an SBUS driver for the ESP32 would also be easier than writing a driver for one of the other protocols
 used to communicate directly with an ESC.
 
-![ESP32 to F4 Noxe v3 to ESC](assets/esc_communication_overview.drawio.png)_F4 Noxe v3 flight controller acts as SBUS-to-DSHOT gateway between ESP32 and ESC_
+![ESP32 to F4 Noxe v3 to ESC](assets/esc_communication_overview_background.drawio.png)_F4 Noxe v3 flight controller acts as SBUS-to-DSHOT gateway between ESP32 and ESC_
 
 ### IMU
 
@@ -178,13 +182,13 @@ The original plan was to assemble all the hardware on a breadboard and then sold
 testing was complete, but due to a lack of time, this was not possible and the components remained on the
 breadboard in the final design.
 
-![PretoFlyteFC breadboard](assets/breadboard.drawio.png)
+![PretoFlyteFC breadboard](assets/breadboard_background.drawio.png)
 
 _PretoFlyteFC breadboard_
 
 ### Control Architecture
 
-![Control Loop](assets/control_architecture.drawio.png)_Control loop_
+![Control Loop](assets/control_architecture_background.drawio.png)_Control loop_
 
 The commanded values for the flight control loop are the roll, pitch, yaw, and throttle inputs from the radio
 in the form of PWM signals. All inputs from the radio are put through a low pass filter because lots of high
