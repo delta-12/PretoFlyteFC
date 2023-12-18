@@ -188,10 +188,13 @@ The IMU's accelerometer measures linear acceleration in three dimensions and can
 and pitch angles by applying to the following trigonometric formulas to the X, Y, and Z components of the
 vector read from the accelerometer.
 
-```
-Roll = atan2(Ay, Az)
-Pitch = atan2(-Ax, sqrt(Ay^2, Az^2))
-```
+$$
+\text{Roll} = \text{atan2}(A_y, A_z)
+$$
+
+$$
+\text{Pitch} = \text{atan2}(-A_x, \sqrt{A_y^2 + A_z^2})
+$$
 
 The IMU's gyroscope measures angular rates in three dimesions and can be used to directly measure the rates
 at which the roll and pitch of the quadcopter are changing by simply reading the X, Y, and Z components
@@ -205,11 +208,14 @@ following equation and an alpha value of 0.7 was found to be ideal after some te
 low pass filter, the quadcopter was prone to sudden, violent de-stabilizing movement as a result of high
 frequency noise.
 
-f[n] = &alpha;f[n - 1] + (1 - &alpha;)fi[n], where
+$$
+f[n] = \alpha f[n - 1] + (1 - \alpha) f_i[n]
+$$
 
-- f[n] is the filtered estimate
-- f[n - 1] is the previous result
-- fi[n] is the new instantaneous measurement
+- $f[n]$ is the filtered estimate
+- $f[n - 1]$ is the previous result
+- $f_i[n]$ is the new instantaneous measurement
+- $\alpha$ is a positive parameter less than 1 that determines the cutoff frequency
 
 #### Kalman filter
 
@@ -226,6 +232,62 @@ quadcopter. The Kalman filter will iterate over the following steps, refining it
 3. Update
 4. Covariance Update
 
+The one dimensional Kalman filter used in the flight controller to estimate roll and pitch angles can
+be expressed by the following equations.
+
+$$
+
+\text{Angle}_\text{Kalman}(k) = \text{Angle}_\text{Kalman}(k - 1) + T \cdot \text{Rate}(k)
+
+
+$$
+
+$$
+
+\text{Uncertainty}_\text{Angle}(k) = \text{Uncertainty}_\text{Angle}(k - 1) + T^2 \cdot \sigma^2
+
+
+$$
+
+$$
+
+\text{Gain}_\text{Kalman} = \frac{\text{Uncertainty}_\text{Angle}(k)}{\text{Uncertainty}_\text{Angle}(k) + \delta^2}
+
+
+$$
+
+$$
+
+\text{Angle}_\text{Kalman}(k) = \text{Angle}_\text{Kalman}(k) + \text{Gain}_\text{Kalman} \cdot (\text{Angle}(k) - \text{Angle}_\text{Kalman})
+
+
+$$
+
+$$
+
+\text{Uncertainty}_\text{Angle}(k) = (1 - \text{Gain}_\text{Kalman}) \cdot \text{Uncertainty}_\text{Angle}(k)
+
+
+$$
+
+- $\text{Angle}_\text{Kalman}(k)$ is the current predicted state or angle
+- $\text{Angle}_\text{Kalman}(k - 1)$ is the previous predicted state or angle
+- $\text{Uncertainty}_\text{Angle}(k)$ is the current uncertainty of the prediction
+- $\text{Uncertainty}_\text{Angle}(k - 1)$ is the previous uncertainty of the prediction
+- $\text{Rate}(k)$ is the angular rate or the rate at which the state or angle is changing
+- $\text{Gain}_\text{Kalman}$ is the Kalman gain
+- $\sigma$ is the standard deviation of the measurement of the angular rate
+- $\delta$ is the standard deviation of the measurement of the angle
+- $T$ is the sample time
+
+The first two equations implement the first two steps above respectively, and the last two equations implement
+the last two steps above respectively. The third equation in the middle calculates the Kalman gain used in the
+final two update equations. The Kalman gain is used to blend the predicted state of the system with the actual
+measurements, and essentially determines how much the predicted state should be adjusted based on the current
+measurement. If the measurement is highly reliable (low noise), the Kalman gain will give more weight to the
+measurement. If the measurement is less reliable, it will give more weight to the predicted state. This is
+what makes the Kalman filter effective in dealing with noisy measurements and uncertainties.
+
 #### PID control
 
 PID stands for Proportional-Integral-Derivative, and it's a mechanism to keep a system at a desired setpoint. In
@@ -238,7 +300,34 @@ too quickly toward the setpoint.
 
 PID control can be expressed by the following equation.
 
-\[ \text{Output} = K_p \cdot \text{Error} + K_i \cdot \int \text{Error} \, dt + K_d \cdot \frac{d(\text{Error})}{dt} \]
+$$
+
+\text{Output} = K_p \cdot e(t) + K_i \cdot \int e(t) \, dt + K_d \cdot \frac{d(e(t))}{dt}
+
+
+$$
+
+- $K_p$ is proportional gain
+- $K_i$ is integral gain
+- $K_d$ is derivative gain
+- $e(t)$ is the error or difference between the desired setpoint and the actual state of the system
+
+Increasing $K_p$ will result in a stronger response to the current error, increasing $K_i$ will make the system
+more aggressive in correcting acculumated error, and increasing $K_d$ will add more damping against rapid changes.
+
+In the flight controller, the PID control equation was discretized in the following manner and applied to both the
+roll and pitch error signals.
+
+$$
+
+\text{Output} = K*p \cdot e[n] + K_i \cdot \sum*{k=0}^{n} e[k] \cdot T + K_d \cdot \frac{e[n] - e[n-1]}{T}
+
+
+$$
+
+- $e[n]$ is the current sampled error
+- $e[n - 1]$ is the previous sampled error
+- $T$ is sample time
 
 ### Motors and ESC
 
@@ -431,3 +520,4 @@ discussion of changes you would make to improve the design if you were to do ano
 3. Build Cppcheck
 4. idf.py build, flash, monitor
 5. Make modifications, perform static analysis with Cppcheck
+   $$
