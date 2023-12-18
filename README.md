@@ -27,7 +27,7 @@ This note will be removed to indicate that the README is finished. While this no
   - [Radio Control System](#radio-control-system)
   - [IMU](#imu-1)
   - [SBUS](#sbus)
-    <!-- - [Github Actions](#github-actions) -->
+  - [Github Actions](#github-actions)
     <!-- - [Bill of Materials](#bill-of-materials) -->
 - [Design Testing](#design-testing)
   - [Re-pinning the flight controller to ESC connector](#re-pinning-the-flight-controller-to-esc-connector)
@@ -438,8 +438,21 @@ wildly unstable.
 
 _SBUS wiring to F4 Noxe v3_
 
-<!-- ### Github Actions -->
-<!-- TODO -->
+### Github Actions
+
+Static analysis with [Cppcheck](https://cppcheck.sourceforge.io/) and build checks are performed by Github
+Actions each time code is pushed to the repository. Cppcheck is submoduled in the `tools` directory and was
+integrated into the ESP-IDF CMake build system. Automatic static analysis and continues build checks inspect
+the code without executing it, and look for potential vulnerabilities, bugs, or code smells by analyzing the
+code's structure, syntax, and dependencies. They provide a means for catching issues early in the development
+process, before the code is even run.
+
+Github Actions runs these checks using a custom [Docker](https://www.docker.com/) container for which the
+Dockerfile can be found [here](https://github.com/delta-12/LaserTag/blob/main/tools/docker/Dockerfile).
+If any potential issues are detected, artifacts with a report of the issues are generated and can be downloaded
+after the actions finish running.
+
+![Github Actions example](assets/github_actions.png)_Github Actions example: static analysis fails and produces report, build check passes_
 
 <!-- ### Bill of Materials -->
 <!-- TODO -->
