@@ -449,9 +449,33 @@ _SBUS wiring to F4 Noxe v3_
 
 ### Re-pinning the flight controller to ESC connector
 
+One of the issues encountered early on was that the provided cable to connect the ESC and the F4 Noxe v3 was
+pinned incorrectly out of the box. After several hours struggling to spin the the motors from the Betaflight
+configuration tool, a multimeter was used to determine that connections on the ESC did not match the
+connections on the F4 Noxe v3. Thus, one side of the cable had to be carefully re-pinned to match the
+pinout of the F4 Noxe v3 connector.
+
 ### IMU driver debugging
 
+The IMU driver was primarily debugged using a digital logic analyzer that could be connected to a computer
+over USB and interfaced was a program called Scopy. The logic analyzer was configured to decode the SPI
+communication between the ESP32 and the IMU and verify the correct data was being sent and received. It was
+crucial was tracking down a few bugs that were difficult to diagnose by looking at the code alone.
+
+![ADALM2000 logic analyzer](assets/logic_analyzer.png)_ADALM2000 logic analyzer_
+
+![Logic analyzer connected to breadboard](assets/logic_analyzer_and_breadboard.jpg)_Logic analyzer connected to breadboard_
+
+![SPI decoded in Scopy](assets/scopy_logic_analyzer.png)_SPI decoded in Scopy_
+
 ### Plotter
+
+In order to visualize roll and pitch and the output of the PID control, a simple plotter tool was written in
+Python. The script found in the `tools` directory connects the ESP32 over to a serial port, parses the debug
+information printed out by the flight control loop, and displays it using `matplotlib`. The plotter was used
+to verify that roll and pitch were calculated and filtered correctly.
+
+![Python roll and pitch plotter](assets/pitch_and_roll_plotting_tool.png)_Python roll and pitch plotter_
 
 ### SBUS driver testing with Betaflight configuration tool
 
