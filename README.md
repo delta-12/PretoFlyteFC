@@ -9,7 +9,18 @@ Simple quadcopter flight controller based on an ESP32 and LSM9DS1
 - [Design Overview](#design-overview)
 - [Justification](#justification)
 - [Preliminary Design Verification](#preliminary-design-verification)
+  - [Spinning the Motors](#spinning-the-motors)
+  - [IMU](#imu)
+  - [Radio Transmitter/Receiver](#radio-transmitterreceiver)
 - [Design Implementation](#design-implementation)
+  - [Control Architecture](#control-architecture)
+  - [Motors and ESC](#motors-and-esc)
+  - [Quadcopter Frame](#quadcopter-frame)
+  - [Radio Control System](#radio-control-system)
+  - [IMU](#imu-1)
+  - [SBUS](#sbus)
+  - [Github Actions](#github-actions)
+  - [Bill of Materials](#bill-of-materials)
 - [Design Testing](#design-testing)
 - [Summary, Conclusions, and Future Work](#summary-conclusions-and-future-work)
 - [Repository Organization](#repository-organization)
@@ -36,6 +47,10 @@ PretoFlyteFC works by reading in data from the accelerometer and gyroscope, filt
 inputting the filtered data and commanded angular set points into a PID (Proportional, Integral, Derivative)
 contrl loop, and outputting roll and pitch signals that can then be used to control motor speed to achieve
 the desired set point.
+
+![Quadcopter Roll, Pitch, and Yaw](assets/quadcopter_roll_pitch_yaw.png)
+
+_Quadcopter roll, pitch, and yaw; Source: [http://blog.rctoysky.com/?p=128](http://blog.rctoysky.com/?p=128)_
 
 The original design for PretoFlyteFC was meant to control roll and pitch in addition to roll rate, pitch
 rate, and yaw rate using cascaded PID for both angular and angular rate setpoints as well as implement
@@ -138,8 +153,98 @@ or state of a given input to the transmitter.
   include it in this section. Discuss your design process in developing the system and
   any challenges that came about. -->
 
-<!-- TODO describe purpose of ESC and why it's needed for BLDC motors -->
-<!-- Use of included flight controller also simplified the project by implementing motor mixing and rate control -->
+<!-- TODO complete system diagram -->
+
+The microcontroller selected for this project was the ESP32 because I am already in possession of several
+ESP32 development boards and am very familiar with it and the [ESP-IDF SDK](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/get-started/)
+from Espressif (the company that produces the ESP32) used to program it. The specific development board
+used in this project is the TinyPICO designed and manufactured by Seon Rozenblum AKA, Unexpected Maker.
+This board was chosen in part for its small form factor, making it lightweight and easy to fit on a
+small breadboard, and it highly capable ESP32-PICO-D4 SoC. The radio receiver's PWM outputs connect to
+standard GPIO inputs on the ESP32 and the IMU communicates over SPI. The ESP32 receives 5V power from
+the ESC via the F4 Noxe v3 and outputs the SBUS UART signal to the F4 Noxe v3 via a Sparkfun logic level
+converter which converts the 3.3V logic from the ESP32 to the 5V logic required by the F4 Noxe v3.
+
+<!-- TODO complete wiring diagram -->
+
+_PretoFlyteFC wiring diagram_
+
+The original plan was to assemble all the hardware on a breadboard and then solder it to perf board after
+testing was complete, but due to a lack of time, this was not possible and the components remained on the
+breadboard in the final design.
+
+![PretoFlyteFC breadboard](assets/breadboard.drawio.png)
+
+_PretoFlyteFC breadboard_
+
+### Control Architecture
+
+![Control Loop](assets/control_architecture.drawio.png)_Control loop_
+
+#### Accelerometer Trigonometry
+
+#### Low pass filter
+
+#### Kalman filter
+
+With a little bit of simplification, a one dimensional Kalman filter looks like the following.
+
+#### PID loop
+
+### Motors and ESC
+
+The quadcopter kit used to test PretoFlyteFC is equipped with brushless DC (BLDC) motors, as most quadcopters are.
+Unlike brush DC motors, which are mechanically commutated as the motor spins, BLDC motors must be electronically
+commutated, hence the need for the ESC. Firmware on the ESC uses MOSFETs to quickly switch power between the three
+phases of the BLDC motors based on the measured back EMF in the unpowered phase. The particular 4-in-1 45A ESC
+used in this build also contains a battery elimination circuit (BEC) which means the 7.4V 2s LiPo battery can
+connect directly to the ESC and the ESC will in turn supply power to both the motors and rest of electronics
+including the flight controller. The ESC abstracts away motor control, and the details how BLDC motors and the
+ESC work are largely outside the scope of this project.
+
+The motors are arranged such that adjacent motors rotate in opposite directions and all motors spin inward relative
+to the forward orientation of the quadcopter. This balances the torques from each motor so that the quadcopter does
+not excessively yaw while hovering. By default, the motors did not spin in the correct directions, so the Betaflight
+configuration tool was again used to adjust the direction of rotation.
+
+![Betaflight configuration tool - set motor direction](assets/betaflight_motor_direction.png)_Betaflight configuration tool - set motor direction_
+
+To control a quadcopter, the speed, and thereby thrust, of each motor is varied in the following ways.
+
+- Rise/descend: increase/decrease motor speed equally across all motors
+- Pitch: decrease the speed of the front motors, increase the speed of the read motors to pitch forward, vice versa
+  for the reverse
+- Roll: decrease the speed of the motors on the side to roll towards, increase the speed of the motors on the
+  opposite side
+- Yaw: increase the speed of the motors on one diagonal, decrease the speed of the motors on the other diagonal,
+  motor torques are no longer balanced, creating a net torque on the craft that rotates it
+  This sort of control can be achieved with the following motor mixing algorithm. Since the control loop in
+  PretoFlyteFC outputs roll, pitch, yaw, and throttle commands, motor mixing takes place on the F4 Noxe v3.
+
+![Motor mixing algorithm](assets/motor_mixing.png)
+
+_Motor mixing algorithm; Source: https://reefwing.medium.com/how-to-write-your-own-flight-controller-software-part-4-8d4c9ce4319_
+
+### Quadcopter Frame
+
+The quadcopter frame is comprised of three carbon fiber plates, four carbon arms, and several metal standoffs
+held to together by M3 screws. The carbon fiber plates include mounting holes within the frame for the ESC
+and flight controller included in the kit, and there are mounting points for the motors at the end of the arms.
+The props are secured to the motor shafts with a single nut that threads onto the shaft such that it tightens
+against the prop as the motor spins. The battery was zip-tied to the bottom of the drone to improve the
+balance and stability of the system while PretoFlyteFC hardware was zip-tied to the top of the drone.
+
+### Radio Control System
+
+<!-- Interrupt configuration and timing diagram to illustrate -->
+
+### IMU
+
+### SBUS
+
+### Github Actions
+
+### Bill of Materials
 
 ## Design Testing
 
@@ -157,10 +262,9 @@ or state of a given input to the transmitter.
   uploaded to CANVAS) showing your design functioning. Video demonstration is required to
   be in either the report, or the final presentation. -->
 
-Testing and debugging:
+<!-- Testing and debugging:
 
-<!-- - Had to re-pin the connector for the FC/ESC
-- Motor re-mapping
+- Had to re-pin the connector for the FC/ESC
 - Use of logic analyzer
 - Plotter tool
 - Balance by hand
@@ -170,13 +274,28 @@ Testing and debugging:
 - Verified that flight controller received proper SBUS commands using flight controller configuration software (SBUS driver and level shifting)
 - Already had two IMU in possession, researched the difficulty for building a driver for each, ended using the older, less sophisticated one because easier to implement driver and simpler to work with
 - Verified IMU driver worked with breadboard, printed out pitch and roll
-- Verified the drone could be armed and props could be spun using SBUS driver
- -->
+- Verified the drone could be armed and props could be spun using SBUS driver -->
+
+### Re-pinning the flight controller to ESC connector
+
+### IMU driver debugging
+
+### Plotter
+
+### SBUS driver testing with Betaflight configuration tool
+
+### Arming the Drone
+
+### Flying and PID Tuning
+
+<!-- TODO Videos of test flights -->
 
 ## Summary, Conclusions, and Future Work
 
-Write a brief summary of your project and your conclusions from this assignment. Include a detailed
-discussion of changes you would make to improve the design if you were to do another design iteration.
+<!-- Write a brief summary of your project and your conclusions from this assignment. Include a detailed
+discussion of changes you would make to improve the design if you were to do another design iteration. -->
+
+<!-- Videos of flights -->
 
 - Improve IMU driver and filtering
 - Develop physical model of the system, better PID tuning, build rig for tuning
@@ -192,6 +311,10 @@ discussion of changes you would make to improve the design if you were to do ano
 │   └── workflows
 ├── assets
 ├── components
+|   ├── Kalman
+|   |   └── include
+|   ├── Lsm9ds1
+|   |   └── include
 │   └── Sbus
 |       └── include
 ├── main
@@ -201,3 +324,9 @@ discussion of changes you would make to improve the design if you were to do ano
 ```
 
 ## Build Instructions
+
+1. Install ESP-IDF SDK
+2. Clone repo with submodules
+3. Build Cppcheck
+4. idf.py build, flash, monitor
+5. Make modifications, perform static analysis with Cppcheck
