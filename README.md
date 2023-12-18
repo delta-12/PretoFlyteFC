@@ -30,9 +30,11 @@ This note will be removed to indicate that the README is finished. While this no
     <!-- - [Github Actions](#github-actions) -->
     <!-- - [Bill of Materials](#bill-of-materials) -->
 - [Design Testing](#design-testing)
-- [Summary, Conclusions, and Future Work](#summary-conclusions-and-future-work)
+- [Conclusion](#conclusion)
+  - [Future Work](#future-work)
 - [Repository Organization](#repository-organization)
 - [Build Instructions](#build-instructions)
+- [Acknowledgements](#acknowledgements)
 
 ### Note:
 
@@ -359,6 +361,8 @@ The props are secured to the motor shafts with a single nut that threads onto th
 against the prop as the motor spins. The battery was zip-tied to the bottom of the drone to improve the
 balance and stability of the system while PretoFlyteFC hardware was zip-tied to the top of the drone.
 
+![Quadcopter frame assembly](assets/frame_assembly.png)_Quadcopter frame mid-way through assembly_
+
 ### Radio Control System
 
 <!-- TODO Interrupt configuration and timing diagram to illustrate -->
@@ -503,14 +507,40 @@ motors could actually be spun up and controlled via the F4 Noxe v3 as seen below
 
 ### Flying and PID Tuning
 
-<!-- TODO Videos of test flights -->
+I did not have enough time to create a proper dynamic model of the system, and therefore all PID tuning was
+done by hand. This involved doing repeated test flights to get a physical feel of how the drone behaved,
+and incrementally adjusting the the PID gains. If the quadcopter did not feel responsive enough, the
+proportional gain was increased. However, if the quadcopter seemed to oscillate too much, then the
+proportional gain was decreased. If the quadcopter was not correcting itself after pitching or rolling
+fast enough, then the integral gain was increased. And if the quadcopter was righting itself almost too
+quickly, to the point of overshooting in the other direction and/or oscillating a small change was made
+to the derivative gain. This process was repeated over several hours before semi-stable flight was achieved,
+at which point it felt like the drone was actually able to be controlled by the operator.
 
-## Summary, Conclusions, and Future Work
+The following videos show the progression in testing.
 
-<!-- Write a brief summary of your project and your conclusions from this assignment. Include a detailed
-discussion of changes you would make to improve the design if you were to do another design iteration. -->
+[![Grounded pitch and roll test](https://youtu.be/y5cHK5qY8fA)](https://youtu.be/y5cHK5qY8fA)
 
-<!-- TODO Videos of flights -->
+[![Handheld pitch and roll test](https://youtu.be/37rR_raqu7o)](https://youtu.be/37rR_raqu7o)
+
+[![Unstable Quadcopter, crashes when taking off](https://youtube.com/shorts/U57O32ZoIbo)](https://youtube.com/shorts/U57O32ZoIbo)
+
+[![Initial flight test](https://youtu.be/sUs_jny6zJY)](https://youtu.be/sUs_jny6zJY)
+
+## Conclusion
+
+Here is a video of the quadcopter flying after much tuning. It's stability and ease of control improved
+significantly from the first tests, but there is still more work required to get it completely stable.
+Nonetheless, it feels like it now responds to input on the radio transmitter and works to correct itself.
+
+[![Quadcopter Flight](https://youtu.be/inWPQBdPQ5g)](https://youtu.be/inWPQBdPQ5g)
+
+Overall, this was an excellent academic exercise for me, and I learned a lot about quadcopters and control
+theory including quadcopter dynamics, motor mixing, filtering, and PID control. PretoFlyteFC requires much
+more work before it can be fully declared a stable flight controller, but the project was definitely a success
+in its learning objectives.
+
+### Future Work
 
 - Improve IMU driver and filtering
 - Develop physical model of the system, better PID tuning, build rig for tuning
@@ -545,4 +575,8 @@ discussion of changes you would make to improve the design if you were to do ano
 3. Build Cppcheck
 4. idf.py build, flash, monitor
 5. Make modifications, perform static analysis with Cppcheck
-   $$
+
+## Acknowledgements
+
+Special thanks to Tyler Hansen for providing 3D-printed feet for the quadcopter and filming test videos,
+and to Bronco York for assisting with tuning tests.
